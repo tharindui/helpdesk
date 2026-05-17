@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(bun install *)",
+      "PowerShell(npm *)",
+      "Bash(bun run *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(bun *)",
+      "PowerShell(cd \"D:\\\\Code with Mosh\\\\Claude\\\\helpdesk-project\\\\server\"; Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd \"D:\\\\Code with Mosh\\\\Claude\\\\helpdesk-project\\\\server\"; bun --watch src/index.ts' -PassThru | Select-Object Id)",
+      "PowerShell(cd \"D:\\\\Code with Mosh\\\\Claude\\\\helpdesk-project\\\\client\"; Start-Process powershell -ArgumentList '-NoExit', '-Command', 'cd \"D:\\\\Code with Mosh\\\\Claude\\\\helpdesk-project\\\\client\"; npm run dev' -PassThru | Select-Object Id)",
+      "PowerShell(Get-Process *)",
+      "Bash(dir \"D:\\\\Code with Mosh\\\\Claude\\\\helpdesk-project\")",
+      "Bash(npm install *)",
+      "Bash(Get-Content *)",
+      "PowerShell(bun add *)",
+      "PowerShell(yarn *)",
+      "Bash(git rm *)",
+      "Bash(psql --version)",
+      "Bash(git add *)"
+    ]
+  }
+}
