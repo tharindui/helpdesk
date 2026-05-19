@@ -18,7 +18,14 @@
       "PowerShell(yarn *)",
       "Bash(git rm *)",
       "Bash(psql --version)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(bun add *)",
+      "Bash(bunx prisma *)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(bun --watch src/index.ts)",
+      "Bash(curl *)",
+      "Bash(git config *)"
     ]
   }
 }
