@@ -1,28 +1,32 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { authClient } from "./lib/auth-client";
+import LoginPage from "./pages/LoginPage";
+import HomePage from "./pages/HomePage";
 
-function App() {
-  const [status, setStatus] = useState<string | null>(null);
+function ProtectedRoute() {
+  const { data: session, isPending } = authClient.useSession();
 
-  useEffect(() => {
-    fetch("http://localhost:3000/api/health")
-      .then((res) => res.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus("error"));
-  }, []);
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Helpdesk</h1>
-        <p className="mt-2 text-gray-500">AI-Powered Ticket Management</p>
-        {status && (
-          <p className={`mt-4 text-sm font-medium ${status === "ok" ? "text-green-600" : "text-red-600"}`}>
-            Server status: {status}
-          </p>
-        )}
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-400 text-sm">Loading…</div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return session ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<HomePage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
