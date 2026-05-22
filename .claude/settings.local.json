@@ -33,7 +33,12 @@
       "Bash(Select-Object FullName)",
       "Bash(Sort-Object FullName)",
       "Bash(bun dev *)",
-      "PowerShell(Get-NetTCPConnection *)"
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@4.6.0 init -d)",
+      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest init -d)",
+      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add input label card form --overwrite)",
+      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add form --overwrite)"
     ]
   }
 }
