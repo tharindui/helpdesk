@@ -38,7 +38,8 @@
       "Bash(npx shadcn@4.6.0 init -d)",
       "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest init -d)",
       "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add input label card form --overwrite)",
-      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add form --overwrite)"
+      "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add form --overwrite)",
+      "Bash(bun -e ' *)"
     ]
   }
 }

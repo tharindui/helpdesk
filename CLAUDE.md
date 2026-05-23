@@ -66,9 +66,10 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - **shadcn/ui** installed (style: `base-nova`, base color: `neutral`). Components live in `src/components/ui/`. Theme CSS variables are in `src/index.css` via `@theme inline`.
 - **Path alias** `@` → `src/` configured in both `tsconfig.json` and `vite.config.ts`.
 - TypeScript strict mode with `noUnusedLocals` and `noUnusedParameters` enforced.
-- **Routing:** React Router v7 — `/login` (public), `/` (protected via `ProtectedRoute`). Catch-all redirects to `/`.
-- **Auth:** Better Auth client in `src/lib/auth-client.ts`. Use `authClient.useSession()` for session state (`session.user.name`, `.email`, `.role`), `authClient.signIn.email()` to log in, `authClient.signOut()` to log out.
-- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard with NavBar).
+- **Routing:** React Router v7. Route guards in `App.tsx`: `ProtectedRoute` (any authenticated user), `AdminRoute` (admin role only, nested inside `ProtectedRoute`), `AppLayout` (shared layout — NavBar + footer — wrapping all authenticated pages via `<Outlet />`). Routes: `/login` (public), `/` (protected), `/users` (admin only). Catch-all redirects to `/`.
+- **Auth:** Better Auth client in `src/lib/auth-client.ts` — uses `inferAdditionalFields<typeof auth>()` plugin to pull `role` typing from the server's `auth` instance. Use `authClient.useSession()` for session state (`session.user.name`, `.email`, `.role`), `authClient.signIn.email()` to log in, `authClient.signOut()` to log out.
+- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only, users heading).
+- **Shared layout:** `src/components/AppLayout.tsx` — renders `NavBar`, `<main>` with `max-w-5xl` container via `<Outlet />`, and a `<footer>`. All authenticated pages nest under this; pages render only their own content, not a full-page wrapper.
 
 ### UI Conventions
 
@@ -76,7 +77,7 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - Use `aria-invalid={!!error}` on `Input` components to trigger error styling — do not use conditional classNames.
 - Error messages: `text-xs text-destructive` below the field; root-level errors: `bg-destructive/10 border border-destructive/30 text-destructive` alert div.
 - Loading states: `<p className="text-sm text-muted-foreground">` on a `bg-background` full-screen div.
-- NavBar pattern: sticky header with `backdrop-blur`, user avatar (initials), `Button variant="ghost"` with lucide icon.
+- NavBar pattern: sticky header with `backdrop-blur`, user avatar (initials), `Button variant="ghost"` with lucide icon. Use `NavLink` for nav links — active state `text-foreground font-medium`, inactive `text-muted-foreground hover:text-foreground`. Condition admin-only links on `session?.user.role === "admin"`.
 
 ### Adding shadcn Components
 
@@ -88,12 +89,6 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add <component>
 ```
 
 Installed components: `button`, `input`, `label`, `card`.
-
-### Database
-
-- PostgreSQL accessed through **Prisma**. Migrations and schema live in `server/prisma/`.
-- Sessions stored in Postgres by Better Auth (no JWTs, no `connect-pg-simple`). Better Auth tables (User, Session, Account, Verification) are generated in `server/src/generated/prisma/`.
-- Admin user created via seed script (`server/prisma/seed.ts`).
 
 ### AI Integration
 

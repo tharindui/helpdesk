@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,19 @@ export default function NavBar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
-        <span className="text-base font-semibold tracking-tight">Helpdesk</span>
+        <div className="flex items-center gap-6">
+          <span className="text-base font-semibold tracking-tight">Helpdesk</span>
+          {session?.user.role === "admin" && (
+            <NavLink
+              to="/users"
+              className={({ isActive }) =>
+                `text-sm ${isActive ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`
+              }
+            >
+              Users
+            </NavLink>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
           {session && (
