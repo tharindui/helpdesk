@@ -100,12 +100,7 @@ Installed components: `button`, `input`, `label`, `card`.
 
 ### E2E Testing (Playwright)
 
-- Playwright workspace at `e2e/`. Run tests with `bun test:e2e` from root or `bun test` inside `e2e/`.
-- **Separate test database** (`helpdesk_test`) on port 3001 to avoid conflicts with the dev server (port 3000). Vite test client runs on port 5174 (dev uses 5173).
-- Test env vars in `server/.env.test`. `vite.config.ts` proxy target reads from `VITE_API_URL` env var (falls back to `http://localhost:3000` for dev).
-- `e2e/global-setup.ts` runs before tests: creates `helpdesk_test` DB if missing, resets schema via `prisma migrate reset --force --skip-seed`, seeds test users.
-- `workers: 1` — tests run serially to avoid shared DB conflicts.
-- Chromium only.
+Use the **`e2e-test-writer` agent** for all Playwright test work — writing new tests, adding coverage for existing pages, or expanding the test suite. Invoke it via the Agent tool whenever a feature is complete or tests are explicitly requested.
 
 ### AI Integration
 
