@@ -39,7 +39,10 @@
       "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest init -d)",
       "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add input label card form --overwrite)",
       "Bash(NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add form --overwrite)",
-      "Bash(bun -e ' *)"
+      "Bash(bun -e ' *)",
+      "Bash(bun --env-file=.env.test x prisma migrate deploy)",
+      "Bash(DATABASE_URL=postgresql://postgres:129804@localhost:5432/helpdesk_test?schema=public BETTER_AUTH_SECRET=test-secret-for-e2e-tests-only-use-32chars BETTER_AUTH_URL=http://localhost:3001 bun -e ' *)",
+      "Bash(DATABASE_URL=postgresql://postgres:129804@localhost:5432/helpdesk_test?schema=public bun -e ' *)"
     ]
   }
 }

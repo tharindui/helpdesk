@@ -54,10 +54,10 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 ### Authentication (Server)
 
 - **`server/src/auth.ts`** — exports `auth`, the Better Auth instance. Uses the Prisma adapter (PostgreSQL). Email/password auth only; **sign-up is disabled** (`disableSignUp: true`) — users must be seeded. User has an additional `role` field (`"admin" | "agent"`, default `"agent"`, not user-settable via API).
-- **Express mounting** (`index.ts`): `app.all("/api/auth/*path", toNodeHandler(auth))` — registered **before** `express.json()` (Better Auth reads the raw body).
-- **`server/src/middleware/requireAuth.ts`** — `requireAuth` middleware: calls `auth.api.getSession()`, attaches `req.user` and `req.session` to the request (typed via global Express namespace declaration), returns 401 if no valid session. Add to any protected route: `app.get("/api/...", requireAuth, handler)`.
-- Access `req.user.role` inside handlers for admin-only checks.
-- Env vars required: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGINS` (comma-separated).
+- **Express mounting** (`index.ts`): auth routes registered **before** `express.json()` (Better Auth reads the raw body). `helmet()` and CORS (origin from `TRUSTED_ORIGINS` env var) applied globally. `authLimiter` (100 req / 15 min via `express-rate-limit`) applied to `/api/auth/*path` in **production only** (`NODE_ENV=production`).
+- **`server/src/middleware/requireAuth.ts`** — exports two middleware: `requireAuth` (attaches `req.user` + `req.session`, returns 401 if no session) and `requireAdmin` (returns 403 if `req.user.role !== "admin"`). Always chain as `requireAuth, requireAdmin` for admin-only routes — never rely on client-side guards alone.
+- **`auth.ts` startup validation:** throws at startup if `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `TRUSTED_ORIGINS` are missing.
+- Env vars required: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGINS` (comma-separated), `NODE_ENV`.
 
 ### Client (`client/src/`)
 
@@ -89,6 +89,23 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add <component>
 ```
 
 Installed components: `button`, `input`, `label`, `card`.
+
+### Database
+
+- PostgreSQL accessed through **Prisma**. Migrations and schema live in `server/prisma/`. Seed script at `server/prisma/seed.ts` creates the admin user (reads `SEED_ADMIN_EMAIL` env var, generates a random password).
+- Sessions stored in Postgres by Better Auth (no JWTs). Better Auth tables (User, Session, Account, Verification) generated in `server/src/generated/prisma/`.
+- Seeded users: admin (`SEED_ADMIN_EMAIL` env var, role: `admin`), agent (`agent@example.com` / `password123`, role: `agent`).
+- To create additional users: instantiate a separate `betterAuth` instance with sign-up enabled, call `seedAuth.api.signUpEmail()`, then optionally `prisma.user.update()` to set the role.
+- **Running Prisma CLI against a non-default database:** pass `DATABASE_URL` directly in the shell — `dotenv/config` in `prisma.config.ts` loads `.env` but won't override an already-set env var: `DATABASE_URL="..." bunx prisma migrate deploy`.
+
+### E2E Testing (Playwright)
+
+- Playwright workspace at `e2e/`. Run tests with `bun test:e2e` from root or `bun test` inside `e2e/`.
+- **Separate test database** (`helpdesk_test`) on port 3001 to avoid conflicts with the dev server (port 3000). Vite test client runs on port 5174 (dev uses 5173).
+- Test env vars in `server/.env.test`. `vite.config.ts` proxy target reads from `VITE_API_URL` env var (falls back to `http://localhost:3000` for dev).
+- `e2e/global-setup.ts` runs before tests: creates `helpdesk_test` DB if missing, resets schema via `prisma migrate reset --force --skip-seed`, seeds test users.
+- `workers: 1` — tests run serially to avoid shared DB conflicts.
+- Chromium only.
 
 ### AI Integration
 

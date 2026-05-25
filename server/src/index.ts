@@ -21,7 +21,9 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.all("/api/auth/*path", authLimiter, toNodeHandler(auth));
+const isProduction = process.env.NODE_ENV === "production";
+
+app.all("/api/auth/*path", ...(isProduction ? [authLimiter] : []), toNodeHandler(auth));
 
 app.use(express.json());
 
