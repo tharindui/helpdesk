@@ -40,9 +40,13 @@ export default async function globalSetup() {
 
   // Drop all tables and re-apply all migrations for a clean state
   // DATABASE_URL is passed directly so it takes precedence over dotenv/config in prisma.config.ts
-  execSync("bunx prisma migrate reset --force --skip-seed", {
+  execSync("bunx prisma migrate reset --force", {
     cwd: serverDir,
-    env: { ...env, DATABASE_URL: testEnv.DATABASE_URL },
+    env: {
+      ...env,
+      DATABASE_URL: testEnv.DATABASE_URL,
+      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "yes do",
+    },
     stdio: "inherit",
   });
 

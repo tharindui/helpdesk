@@ -2,21 +2,17 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma, { Role } from "../src/db";
 
-const email = process.env.SEED_ADMIN_EMAIL;
+const adminEmail = process.env.SEED_ADMIN_EMAIL;
 
-if (!email) {
+if (!adminEmail) {
   console.error("SEED_ADMIN_EMAIL must be set");
   process.exit(1);
 }
 
-const existing = await prisma.user.findUnique({ where: { email } });
-
-if (existing) {
-  console.log(`Admin user already exists: ${email}`);
-  process.exit(0);
-}
-
-const password = crypto.randomUUID();
+// Use SEED_ADMIN_PASSWORD when provided (e.g. in test environments where the
+// password must be deterministic). Fall back to a random UUID for production
+// seeding where the password is printed to stdout for the operator.
+const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? crypto.randomUUID();
 
 // Separate auth instance with signup enabled for seeding
 const seedAuth = betterAuth({
@@ -26,14 +22,43 @@ const seedAuth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
 });
 
-const result = await seedAuth.api.signUpEmail({
-  body: { email, password, name: "Admin" },
-});
+// ------------------------------------------------------------------
+// Admin user
+// ------------------------------------------------------------------
 
-await prisma.user.update({
-  where: { id: result.user.id },
-  data: { role: Role.admin },
-});
+const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
 
-console.log(`Admin user created: ${email}`);
-console.log(`Password: ${password}`);
+if (existingAdmin) {
+  console.log(`Admin user already exists: ${adminEmail}`);
+} else {
+  const result = await seedAuth.api.signUpEmail({
+    body: { email: adminEmail, password: adminPassword, name: "Admin" },
+  });
+
+  await prisma.user.update({
+    where: { id: result.user.id },
+    data: { role: Role.admin },
+  });
+
+  console.log(`Admin user created: ${adminEmail}`);
+  console.log(`Password: ${adminPassword}`);
+}
+
+// ------------------------------------------------------------------
+// Agent user (fixed credentials used by E2E tests)
+// ------------------------------------------------------------------
+
+const agentEmail = "agent@example.com";
+const agentPassword = "password123";
+
+const existingAgent = await prisma.user.findUnique({ where: { email: agentEmail } });
+
+if (existingAgent) {
+  console.log(`Agent user already exists: ${agentEmail}`);
+} else {
+  await seedAuth.api.signUpEmail({
+    body: { email: agentEmail, password: agentPassword, name: "Agent" },
+  });
+
+  console.log(`Agent user created: ${agentEmail}`);
+}
