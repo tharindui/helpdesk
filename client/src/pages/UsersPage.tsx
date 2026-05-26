@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import axios from "axios";
 import api from "@/lib/axios";
 
 type Role = "admin" | "agent";
@@ -25,7 +26,7 @@ type User = {
   createdAt: string;
 };
 
-// ─── Schemas ────────────────────────────────────────────────────────────────
+// ─── Schemas ─────────────────────────────────────────────────────────────────
 
 const addSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -43,58 +44,61 @@ const editSchema = z.object({
 type AddFormData = z.infer<typeof addSchema>;
 type EditFormData = z.infer<typeof editSchema>;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── API ──────────────────────────────────────────────────────────────────────
 
-async function apiFetch(path: string, options?: { method?: string; body?: unknown }) {
-  try {
-    const res = await api.request({
-      url: path,
-      method: options?.method ?? "GET",
-      data: options?.body,
-    });
-    return res.data;
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      throw new Error(err.response?.data?.error ?? "Request failed");
-    }
-    throw err;
-  }
+function extractError(err: unknown): string {
+  if (axios.isAxiosError(err)) return err.response?.data?.error ?? "Request failed";
+  return "Request failed";
 }
+
+const usersApi = {
+  list: () => api.get<User[]>("/api/users").then((r) => r.data),
+  create: (data: AddFormData) => api.post<User>("/api/users", data).then((r) => r.data),
+  update: ({ id, data }: { id: string; data: EditFormData }) =>
+    api.patch<User>(`/api/users/${id}`, data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/api/users/${id}`),
+};
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [isPending, setIsPending] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [addOpen, setAddOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
 
-  const loadUsers = () => {
-    setIsPending(true);
-    apiFetch("/api/users")
-      .then((data) => setUsers(data as User[]))
-      .catch(() => setPageError("Something went wrong. Please try again."))
-      .finally(() => setIsPending(false));
-  };
+  const { data: users = [], isPending, isError } = useQuery({
+    queryKey: ["users"],
+    queryFn: usersApi.list,
+  });
 
-  useEffect(loadUsers, []);
+  const addMutation = useMutation({
+    mutationFn: usersApi.create,
+    onSuccess: (user) => {
+      queryClient.setQueryData<User[]>(["users"], (prev = []) => [...prev, user]);
+      setAddOpen(false);
+    },
+  });
 
-  const handleAdd = (user: User) => {
-    setUsers((prev) => [...prev, user]);
-    setAddOpen(false);
-  };
+  const editMutation = useMutation({
+    mutationFn: usersApi.update,
+    onSuccess: (updated) => {
+      queryClient.setQueryData<User[]>(["users"], (prev = []) =>
+        prev.map((u) => (u.id === updated.id ? updated : u))
+      );
+      setEditUser(null);
+    },
+  });
 
-  const handleEdit = (updated: User) => {
-    setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-    setEditUser(null);
-  };
-
-  const handleDelete = (id: string) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    setDeleteUser(null);
-  };
+  const deleteMutation = useMutation({
+    mutationFn: usersApi.remove,
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<User[]>(["users"], (prev = []) =>
+        prev.filter((u) => u.id !== id)
+      );
+      setDeleteUser(null);
+    },
+  });
 
   if (isPending) {
     return (
@@ -116,13 +120,13 @@ export default function UsersPage() {
         <Button onClick={() => setAddOpen(true)}>Add User</Button>
       </div>
 
-      {pageError && (
+      {isError && (
         <div className="mb-6 rounded-md bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 text-sm">
-          {pageError}
+          Something went wrong. Please try again.
         </div>
       )}
 
-      {!pageError && users.length === 0 ? (
+      {!isError && users.length === 0 ? (
         <div className="rounded-lg border border-border bg-background py-12 text-center">
           <p className="text-sm text-muted-foreground">No users found.</p>
         </div>
@@ -158,11 +162,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditUser(user)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setEditUser(user)}>
                         Edit
                       </Button>
                       <Button
@@ -185,19 +185,26 @@ export default function UsersPage() {
       <AddUserDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        onSuccess={handleAdd}
+        onSubmit={(data) => addMutation.mutate(data)}
+        isSubmitting={addMutation.isPending}
+        error={addMutation.isError ? extractError(addMutation.error) : null}
+        onClose={() => { setAddOpen(false); addMutation.reset(); }}
       />
 
       <EditUserDialog
         user={editUser}
-        onOpenChange={(open) => !open && setEditUser(null)}
-        onSuccess={handleEdit}
+        onOpenChange={(open) => { if (!open) { setEditUser(null); editMutation.reset(); } }}
+        onSubmit={(data) => editUser && editMutation.mutate({ id: editUser.id, data })}
+        isSubmitting={editMutation.isPending}
+        error={editMutation.isError ? extractError(editMutation.error) : null}
       />
 
       <DeleteUserDialog
         user={deleteUser}
-        onOpenChange={(open) => !open && setDeleteUser(null)}
-        onSuccess={handleDelete}
+        onOpenChange={(open) => { if (!open) { setDeleteUser(null); deleteMutation.reset(); } }}
+        onConfirm={() => deleteUser && deleteMutation.mutate(deleteUser.id)}
+        isDeleting={deleteMutation.isPending}
+        error={deleteMutation.isError ? extractError(deleteMutation.error) : null}
       />
     </div>
   );
@@ -208,44 +215,33 @@ export default function UsersPage() {
 function AddUserDialog({
   open,
   onOpenChange,
-  onSuccess,
+  onSubmit,
+  isSubmitting,
+  error,
+  onClose,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (user: User) => void;
+  onSubmit: (data: AddFormData) => void;
+  isSubmitting: boolean;
+  error: string | null;
+  onClose: () => void;
 }) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<AddFormData>({ resolver: zodResolver(addSchema) });
-
-  const onSubmit = async (data: AddFormData) => {
-    try {
-      const user = await apiFetch("/api/users", {
-        method: "POST",
-        body: data,
-      });
-      reset();
-      onSuccess(user);
-    } catch (err) {
-      setError("root", { message: (err as Error).message });
-    }
-  };
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<AddFormData>({
+    resolver: zodResolver(addSchema),
+  });
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } onOpenChange(o); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add User</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
-          {errors.root && (
+        <form onSubmit={handleSubmit((data) => { onSubmit(data); reset(); })} className="space-y-4 py-2">
+          {error && (
             <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-sm">
-              {errors.root.message}
+              {error}
             </div>
           )}
 
@@ -270,11 +266,10 @@ function AddUserDialog({
           <div className="space-y-1">
             <Label htmlFor="add-role">Role</Label>
             <RoleSelect id="add-role" {...register("role")} />
-            {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => { reset(); onOpenChange(false); }}>
+            <Button type="button" variant="ghost" onClick={() => { reset(); onClose(); }}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
@@ -292,36 +287,23 @@ function AddUserDialog({
 function EditUserDialog({
   user,
   onOpenChange,
-  onSuccess,
+  onSubmit,
+  isSubmitting,
+  error,
 }: {
   user: User | null;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (user: User) => void;
+  onSubmit: (data: EditFormData) => void;
+  isSubmitting: boolean;
+  error: string | null;
 }) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors, isSubmitting },
-  } = useForm<EditFormData>({ resolver: zodResolver(editSchema) });
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<EditFormData>({
+    resolver: zodResolver(editSchema),
+  });
 
   useEffect(() => {
     if (user) reset({ name: user.name, email: user.email, role: user.role });
   }, [user, reset]);
-
-  const onSubmit = async (data: EditFormData) => {
-    if (!user) return;
-    try {
-      const updated = await apiFetch(`/api/users/${user.id}`, {
-        method: "PATCH",
-        body: data,
-      });
-      onSuccess(updated);
-    } catch (err) {
-      setError("root", { message: (err as Error).message });
-    }
-  };
 
   return (
     <Dialog open={!!user} onOpenChange={onOpenChange}>
@@ -331,9 +313,9 @@ function EditUserDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
-          {errors.root && (
+          {error && (
             <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-sm">
-              {errors.root.message}
+              {error}
             </div>
           )}
 
@@ -352,7 +334,6 @@ function EditUserDialog({
           <div className="space-y-1">
             <Label htmlFor="edit-role">Role</Label>
             <RoleSelect id="edit-role" {...register("role")} />
-            {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
           </div>
 
           <DialogFooter>
@@ -374,28 +355,16 @@ function EditUserDialog({
 function DeleteUserDialog({
   user,
   onOpenChange,
-  onSuccess,
+  onConfirm,
+  isDeleting,
+  error,
 }: {
   user: User | null;
   onOpenChange: (open: boolean) => void;
-  onSuccess: (id: string) => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+  error: string | null;
 }) {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const handleDelete = async () => {
-    if (!user) return;
-    setIsDeleting(true);
-    setError(null);
-    try {
-      await apiFetch(`/api/users/${user.id}`, { method: "DELETE" });
-      onSuccess(user.id);
-    } catch (err) {
-      setError((err as Error).message);
-      setIsDeleting(false);
-    }
-  };
-
   return (
     <Dialog open={!!user} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -420,7 +389,7 @@ function DeleteUserDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isDeleting}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+          <Button variant="destructive" onClick={onConfirm} disabled={isDeleting}>
             {isDeleting ? "Deleting…" : "Delete"}
           </Button>
         </DialogFooter>
@@ -430,8 +399,6 @@ function DeleteUserDialog({
 }
 
 // ─── Shared Components ────────────────────────────────────────────────────────
-
-import { forwardRef } from "react";
 
 const RoleSelect = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
   ({ className, ...props }, ref) => (

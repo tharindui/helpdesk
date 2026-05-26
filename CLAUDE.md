@@ -68,7 +68,9 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - TypeScript strict mode with `noUnusedLocals` and `noUnusedParameters` enforced.
 - **Routing:** React Router v7. Route guards in `App.tsx`: `ProtectedRoute` (any authenticated user), `AdminRoute` (admin role only, nested inside `ProtectedRoute`), `AppLayout` (shared layout — NavBar + footer — wrapping all authenticated pages via `<Outlet />`). Routes: `/login` (public), `/` (protected), `/users` (admin only). Catch-all redirects to `/`.
 - **Auth:** Better Auth client in `src/lib/auth-client.ts` — uses `inferAdditionalFields<typeof auth>()` plugin to pull `role` typing from the server's `auth` instance. Use `authClient.useSession()` for session state (`session.user.name`, `.email`, `.role`), `authClient.signIn.email()` to log in, `authClient.signOut()` to log out.
-- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only, users heading).
+- **HTTP client:** Axios. Use the shared instance at `src/lib/axios.ts` (pre-configured with `withCredentials: true`). Never use `fetch` directly.
+- **Server state:** TanStack Query (`@tanstack/react-query`). `QueryClientProvider` is mounted in `App.tsx`. Use `useQuery` for data fetching and `useMutation` for create/update/delete. Update the cache via `queryClient.setQueryData` on mutation success — avoid unnecessary refetches.
+- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only — full CRUD: list, add, edit, delete users).
 - **Shared layout:** `src/components/AppLayout.tsx` — renders `NavBar`, `<main>` with `max-w-5xl` container via `<Outlet />`, and a `<footer>`. All authenticated pages nest under this; pages render only their own content, not a full-page wrapper.
 
 ### UI Conventions
@@ -88,7 +90,7 @@ cd client
 NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add <component>
 ```
 
-Installed components: `button`, `input`, `label`, `card`.
+Installed components: `button`, `input`, `label`, `card`, `dialog`.
 
 ### Database
 
