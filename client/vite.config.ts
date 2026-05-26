@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -16,6 +17,14 @@ export default defineConfig({
         target: process.env.VITE_API_URL ?? "http://localhost:3000",
         changeOrigin: true,
       },
+    },
+  },
+  test: {
+    environment: "happy-dom",
+    globals: true,
+    setupFiles: ["./src/test/setup.ts"],
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 });
