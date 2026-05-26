@@ -38,6 +38,12 @@ cd server && bun run build   # tsc, outputs to server/dist/
 
 # Client: type-check + bundle
 cd client && bun run build   # tsc -b && vite build
+
+# Client: unit tests (run once)
+bun run --filter client test
+
+# Client: unit tests (watch mode)
+bun run --filter client test:watch
 ```
 
 The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests to `http://localhost:3000`, so the client should call `/api/...` (not the absolute URL).
@@ -99,6 +105,18 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 - Seeded users: admin (`SEED_ADMIN_EMAIL` env var, role: `admin`), agent (`agent@example.com` / `password123`, role: `agent`).
 - To create additional users: instantiate a separate `betterAuth` instance with sign-up enabled, call `seedAuth.api.signUpEmail()`, then optionally `prisma.user.update()` to set the role.
 - **Running Prisma CLI against a non-default database:** pass `DATABASE_URL` directly in the shell — `dotenv/config` in `prisma.config.ts` loads `.env` but won't override an already-set env var: `DATABASE_URL="..." bunx prisma migrate deploy`.
+
+### Unit / Component Testing (Vitest + React Testing Library)
+
+- **Stack:** Vitest 4, React Testing Library, `@testing-library/user-event`, `happy-dom` (not jsdom — Windows EPERM issues with jsdom on Bun).
+- **Run:** `bun run --filter client test` (once) or `bun run --filter client test:watch` (watch mode). Do **not** run `vitest` directly or `bun test` — `bun test` invokes Bun's built-in runner instead of Vitest.
+- **File structure:** test files live in a `__tests__/` subdirectory next to the source file, split into three modules:
+  - `mocks.ts` — types, factory functions (`makeUser`, `makeAxiosError`), pure data only
+  - `renders.tsx` — component render helpers wrapping with required providers (`QueryClientProvider`, etc.)
+  - `<ComponentName>.test.tsx` — `vi.mock` declarations (must stay here — Vitest hoists them) + all `describe`/`it` blocks
+- **Mocking axios:** mock `@/lib/axios` with a `vi.fn()` object; use `vi.mocked(api.get).mockResolvedValue(...)` — never use `as ReturnType<typeof vi.fn>` casts (causes IDE type errors).
+- **QueryClient in tests:** create a fresh `QueryClient` per test with `retry: false` (so errors surface immediately without retry delays).
+- **`@testing-library/dom`** must be installed explicitly as a dev dependency — Bun does not auto-install peer dependencies, and `@testing-library/react` re-exports `screen`, `waitFor`, `within` from it.
 
 ### E2E Testing (Playwright)
 
