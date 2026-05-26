@@ -90,7 +90,7 @@ cd client
 NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add <component>
 ```
 
-Installed components: `button`, `input`, `label`, `card`, `dialog`.
+Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 
 ### Database
 

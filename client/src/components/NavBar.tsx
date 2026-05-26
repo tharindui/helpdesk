@@ -23,7 +23,9 @@ export default function NavBar() {
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <span className="text-base font-semibold tracking-tight">Helpdesk</span>
+          <NavLink to="/" className="text-base font-semibold tracking-tight text-foreground">
+            Helpdesk
+          </NavLink>
           {session?.user.role === "admin" && (
             <NavLink
               to="/users"
