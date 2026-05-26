@@ -5,6 +5,7 @@ import { rateLimit } from "express-rate-limit";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { requireAuth } from "./middleware/requireAuth";
+import usersRouter from "./routes/users";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -35,6 +36,8 @@ app.get("/api/me", requireAuth, (req, res) => {
   const { id, name, email, role } = req.user!;
   res.json({ user: { id, name, email, role } });
 });
+
+app.use("/api/users", usersRouter);
 
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
