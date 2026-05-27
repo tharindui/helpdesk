@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Documentation
 
-Use the **context7 MCP server** to fetch up-to-date documentation for any library used in this project before implementing features or debugging. Key libraries to look up via context7: React, Express, Prisma, Tailwind CSS, Vite, Anthropic SDK, express-session, connect-pg-simple, SendGrid/Mailgun, Better Auth, shadcn/ui.
+Use the **context7 MCP server** to fetch up-to-date documentation for any library used in this project before implementing features or debugging. Key libraries to look up via context7: React, Express, Prisma, Tailwind CSS, Vite, Anthropic SDK, express-session, connect-pg-simple, SendGrid/Mailgun, Better Auth, shadcn/ui, Zod.
 
 ## Project Overview
 
@@ -56,6 +56,7 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - CORS is configured with `credentials: true` to support cookie-based sessions.
 - Runtime is **Bun** (not Node CLI); use `bun --watch` in dev and `bun dist/index.js` in production.
 - Planned additions: route files per domain (tickets, users, dashboard), email service module, AI service module wrapping the Anthropic SDK.
+- **Express 5 async error handling:** Express 5 automatically forwards rejected promises from async route handlers to error middleware — do **not** wrap route bodies in `try/catch`. Only use `try/catch` when you need to handle a specific error locally (e.g. to return a different status code for a known failure). The centralized error handler is in `src/middleware/errorHandler.ts` and must be registered last in `index.ts`.
 
 ### Authentication (Server)
 
@@ -97,6 +98,14 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add <component>
 ```
 
 Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
+
+### Validation (Zod)
+
+- Use **Zod** for all data validation at system boundaries: API request bodies (server-side), form inputs (client-side), and external data (webhook payloads, API responses).
+- Define schemas in a `schemas/` file co-located with the route or form they validate. Share schemas between client and server only if they live in a shared package — otherwise duplicate to keep packages independent.
+- Server: parse request bodies with `schema.safeParse(req.body)`; on failure return `400` with `{ errors: result.error.flatten().fieldErrors }`.
+- Client: use Zod with **React Hook Form** (`@hookform/resolvers/zod`) — pass `zodResolver(schema)` to `useForm`. Never use Zod `.parse()` in render paths; use `.safeParse()` so errors don't throw.
+- Infer TypeScript types from schemas with `z.infer<typeof schema>` — do not maintain separate interface/type definitions for validated shapes.
 
 ### Database
 
