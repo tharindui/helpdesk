@@ -1,17 +1,21 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type User, extractError } from "./usersApi";
+import { extractError, type User } from "./usersApi";
 import { useUsers } from "./useUsers";
-import { AddUserDialog, EditUserDialog, DeleteUserDialog, RoleBadge } from "./UserDialogs";
+import { type DialogState, UserDialog, RoleBadge } from "./UserDialog";
 
 export default function UsersPage() {
-  const [addOpen, setAddOpen] = useState(false);
-  const [editUser, setEditUser] = useState<User | null>(null);
-  const [deleteUser, setDeleteUser] = useState<User | null>(null);
-
+  const [dialogState, setDialogState] = useState<DialogState>(null);
   const { query, addMutation, editMutation, deleteMutation } = useUsers();
   const { data: users = [], isPending, isError } = query;
+
+  const activeMutation =
+    dialogState?.mode === "add" ? addMutation :
+    dialogState?.mode === "edit" ? editMutation :
+    dialogState?.mode === "delete" ? deleteMutation : null;
+
+  const closeDialog = () => { setDialogState(null); activeMutation?.reset(); };
 
   if (isPending) {
     return (
@@ -60,7 +64,7 @@ export default function UsersPage() {
             {users.length} {users.length === 1 ? "user" : "users"}
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)}>Add User</Button>
+        <Button onClick={() => setDialogState({ mode: "add" })}>Add User</Button>
       </div>
 
       {isError && (
@@ -86,7 +90,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user, i) => (
+              {users.map((user: User, i) => (
                 <tr
                   key={user.id}
                   className={i < users.length - 1 ? "border-b border-border" : ""}
@@ -103,14 +107,14 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditUser(user)}>
+                      <Button variant="ghost" size="sm" onClick={() => setDialogState({ mode: "edit", user })}>
                         Edit
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive"
-                        onClick={() => setDeleteUser(user)}
+                        onClick={() => setDialogState({ mode: "delete", user })}
                       >
                         Delete
                       </Button>
@@ -123,35 +127,20 @@ export default function UsersPage() {
         </div>
       )}
 
-      <AddUserDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onSubmit={(data) => addMutation.mutate(data, { onSuccess: () => setAddOpen(false) })}
-        isSubmitting={addMutation.isPending}
-        error={addMutation.isError ? extractError(addMutation.error) : null}
-        onClose={() => { setAddOpen(false); addMutation.reset(); }}
-      />
-
-      <EditUserDialog
-        user={editUser}
-        onOpenChange={(open) => { if (!open) { setEditUser(null); editMutation.reset(); } }}
-        onSubmit={(data) => editUser && editMutation.mutate(
-          { id: editUser.id, data },
-          { onSuccess: () => setEditUser(null) }
+      <UserDialog
+        state={dialogState}
+        onClose={closeDialog}
+        onAdd={(data) => addMutation.mutate(data, { onSuccess: () => setDialogState(null) })}
+        onEdit={(data) => dialogState?.mode === "edit" && editMutation.mutate(
+          { id: dialogState.user.id, data },
+          { onSuccess: () => setDialogState(null) }
         )}
-        isSubmitting={editMutation.isPending}
-        error={editMutation.isError ? extractError(editMutation.error) : null}
-      />
-
-      <DeleteUserDialog
-        user={deleteUser}
-        onOpenChange={(open) => { if (!open) { setDeleteUser(null); deleteMutation.reset(); } }}
-        onConfirm={() => deleteUser && deleteMutation.mutate(
-          deleteUser.id,
-          { onSuccess: () => setDeleteUser(null) }
+        onDelete={() => dialogState?.mode === "delete" && deleteMutation.mutate(
+          dialogState.user.id,
+          { onSuccess: () => setDialogState(null) }
         )}
-        isDeleting={deleteMutation.isPending}
-        error={deleteMutation.isError ? extractError(deleteMutation.error) : null}
+        isSubmitting={activeMutation?.isPending ?? false}
+        error={activeMutation?.isError ? extractError(activeMutation.error) : null}
       />
     </div>
   );
