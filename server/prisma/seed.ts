@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import prisma, { Role } from "../src/db";
+import { Role } from "@helpdesk/core";
+import prisma from "../src/db";
 
 const adminEmail = process.env.SEED_ADMIN_EMAIL;
 
