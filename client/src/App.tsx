@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Role } from "@helpdesk/core";
 import { authClient } from "./lib/auth-client";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
@@ -29,7 +30,7 @@ function AdminRoute() {
       </div>
     );
   }
-  return session?.user.role === "admin" ? <Outlet /> : <Navigate to="/" replace />;
+  return session?.user.role === Role.admin ? <Outlet /> : <Navigate to="/" replace />;
 }
 
 const queryClient = new QueryClient();

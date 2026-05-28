@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createUserSchema,
   editUserSchema,
+  Role,
   type CreateUserData,
   type EditUserData,
 } from "@helpdesk/core";
@@ -17,9 +18,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { type Role, type User } from "./usersApi";
+import { type User } from "./usersApi";
 
-export type { Role, User };
+export type { User };
 
 export type DialogState =
   | { mode: "add" }
@@ -248,15 +249,15 @@ export const RoleSelect = forwardRef<HTMLSelectElement, React.SelectHTMLAttribut
       className={`h-8 w-full min-w-0 rounded-lg border border-input bg-background px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ""}`}
       {...props}
     >
-      <option value="agent">Agent</option>
-      <option value="admin">Admin</option>
+      <option value={Role.agent}>Agent</option>
+      <option value={Role.admin}>Admin</option>
     </select>
   )
 );
 RoleSelect.displayName = "RoleSelect";
 
 export function RoleBadge({ role }: { role: Role }) {
-  if (role === "admin") {
+  if (role === Role.admin) {
     return (
       <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">
         Admin

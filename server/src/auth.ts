@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { Role } from "@helpdesk/core";
 import prisma from "./db";
 
 if (!process.env.BETTER_AUTH_SECRET) throw new Error("BETTER_AUTH_SECRET must be set");
@@ -15,9 +16,9 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: {
-        type: ["admin", "agent"] as const,
+        type: [Role.admin, Role.agent] as const,
         required: false,
-        defaultValue: "agent" as const,
+        defaultValue: Role.agent,
         input: false,
       },
     },

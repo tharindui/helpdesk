@@ -1,10 +1,10 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { Router } from "express";
-import { createUserSchema, editUserSchema } from "@helpdesk/core";
+import { createUserSchema, editUserSchema, Role } from "@helpdesk/core";
 import { requireAuth, requireAdmin } from "../middleware/requireAuth";
 import { validateBody } from "../middleware/validateBody";
-import prisma, { Role } from "../db";
+import prisma from "../db";
 
 // Separate auth instance with sign-up enabled — used only for admin user creation.
 // The main auth instance has disableSignUp: true to block self-registration.
@@ -32,7 +32,7 @@ router.get("/", requireAuth, requireAdmin, async (_req, res) => {
 
 // POST /api/users
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
-  const { name, email, password, role = "agent" } = validateBody(createUserSchema, req.body);
+  const { name, email, password, role = Role.agent } = validateBody(createUserSchema, req.body);
 
   const existing = await prisma.user.findFirst({ where: { email, deletedAt: null } });
   if (existing) return void res.status(409).json({ error: "Email already in use" });
@@ -41,7 +41,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     body: { name, email, password },
   });
 
-  if (role === "admin") {
+  if (role === Role.admin) {
     await prisma.user.update({
       where: { id: created.user.id },
       data: { role: Role.admin },

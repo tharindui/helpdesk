@@ -1,5 +1,6 @@
 import { useNavigate, NavLink } from "react-router-dom";
 import { LogOut } from "lucide-react";
+import { Role } from "@helpdesk/core";
 import { authClient } from "../lib/auth-client";
 import { Button } from "@/components/ui/button";
 
@@ -26,7 +27,7 @@ export default function NavBar() {
           <NavLink to="/" className="text-base font-semibold tracking-tight text-foreground">
             Helpdesk
           </NavLink>
-          {session?.user.role === "admin" && (
+          {session?.user.role === Role.admin && (
             <NavLink
               to="/users"
               className={({ isActive }) =>

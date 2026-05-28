@@ -1,8 +1,8 @@
 import axios from "axios";
 import api from "@/lib/axios";
-import { type CreateUserData, type EditUserData } from "@helpdesk/core";
+import { type CreateUserData, type EditUserData, type Role } from "@helpdesk/core";
 
-export type Role = "admin" | "agent";
+export type { Role };
 
 export type User = {
   id: string;
