@@ -62,7 +62,7 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 
 - **`server/src/auth.ts`** — exports `auth`, the Better Auth instance. Uses the Prisma adapter (PostgreSQL). Email/password auth only; **sign-up is disabled** (`disableSignUp: true`) — users must be seeded. User has an additional `role` field (`"admin" | "agent"`, default `"agent"`, not user-settable via API).
 - **Express mounting** (`index.ts`): auth routes registered **before** `express.json()` (Better Auth reads the raw body). `helmet()` and CORS (origin from `TRUSTED_ORIGINS` env var) applied globally. `authLimiter` (100 req / 15 min via `express-rate-limit`) applied to `/api/auth/*path` in **production only** (`NODE_ENV=production`).
-- **`server/src/middleware/requireAuth.ts`** — exports two middleware: `requireAuth` (attaches `req.user` + `req.session`, returns 401 if no session) and `requireAdmin` (returns 403 if `req.user.role !== "admin"`). Always chain as `requireAuth, requireAdmin` for admin-only routes — never rely on client-side guards alone.
+- **`server/src/middleware/requireAuth.ts`** — exports two middleware: `requireAuth` (attaches `req.user` + `req.session`, returns 401 if no session or if user has `deletedAt` set) and `requireAdmin` (returns 403 if `req.user.role !== Role.admin`). Always chain as `requireAuth, requireAdmin` for admin-only routes — never rely on client-side guards alone.
 - **`auth.ts` startup validation:** throws at startup if `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, or `TRUSTED_ORIGINS` are missing.
 - Env vars required: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `TRUSTED_ORIGINS` (comma-separated), `NODE_ENV`.
 
@@ -86,7 +86,7 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - Use `aria-invalid={!!error}` on `Input` components to trigger error styling — do not use conditional classNames.
 - Error messages: `text-xs text-destructive` below the field; root-level errors: `bg-destructive/10 border border-destructive/30 text-destructive` alert div.
 - Loading states: `<p className="text-sm text-muted-foreground">` on a `bg-background` full-screen div.
-- NavBar pattern: sticky header with `backdrop-blur`, user avatar (initials), `Button variant="ghost"` with lucide icon. Use `NavLink` for nav links — active state `text-foreground font-medium`, inactive `text-muted-foreground hover:text-foreground`. Condition admin-only links on `session?.user.role === "admin"`.
+- NavBar pattern: sticky header with `backdrop-blur`, user avatar (initials), `Button variant="ghost"` with lucide icon. Use `NavLink` for nav links — active state `text-foreground font-medium`, inactive `text-muted-foreground hover:text-foreground`. Condition admin-only links on `session?.user.role === Role.admin`.
 
 ### Adding shadcn Components
 
@@ -102,14 +102,15 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 ### Validation (Zod)
 
 - Use **Zod** for all data validation at system boundaries: API request bodies (server-side), form inputs (client-side), and external data (webhook payloads, API responses).
-- **Shared schemas live in `core/src/schemas/`.** Any schema used by both client and server must be defined there and imported from `@helpdesk/core` — never duplicate a schema across packages. Server-only or client-only schemas stay local to that package.
+- **Shared schemas and enums live in `core/src/`.** Schemas go in `core/src/schemas/`; shared enums (like `Role`) go in `core/src/enums.ts`. Anything used by both client and server must be defined in `@helpdesk/core` — never duplicate across packages. Server-only or client-only types stay local to that package.
+- **`Role` enum:** Use `Role` from `@helpdesk/core` everywhere — `import { Role } from "@helpdesk/core"`. Never use magic strings `"admin"` or `"agent"` directly; always reference `Role.admin` or `Role.agent`. `Role` is a const-as-enum pattern (`{ admin: "admin", agent: "agent" } as const`) so it works as both a value and a type.
 - Server: parse request bodies with `schema.safeParse(req.body)`; on failure return `400` with `{ errors: result.error.flatten().fieldErrors }`.
 - Client: use **React Hook Form** with `zodResolver` from `@hookform/resolvers/zod`. Pass `zodResolver(schema)` to `useForm<z.infer<typeof schema>>`. Use `register`, `handleSubmit`, and `formState.errors` — never manage form state manually with `useState`.
 - Render field errors with `{errors.field && <p className="text-xs text-destructive">{errors.field.message}</p>}` and `aria-invalid={!!errors.field}` on the input.
 - Never use Zod `.parse()` in render paths; use `.safeParse()` so errors don't throw.
 - Infer TypeScript types from schemas with `z.infer<typeof schema>` — do not maintain separate interface/type definitions for validated shapes.
 - Always put `.trim()` before `.min(1)` on string fields so whitespace-only input is rejected after trimming.
-- Do **not** use `.default()` in shared schemas — it makes the Zod input type optional, which conflicts with `useForm<z.infer<typeof schema>>`. Apply defaults in server route code instead (e.g. `const { role = "agent" } = result.data`).
+- Do **not** use `.default()` in shared schemas — it makes the Zod input type optional, which conflicts with `useForm<z.infer<typeof schema>>`. Apply defaults in server route code instead (e.g. `const { role = Role.agent } = result.data`).
 
 ### Database
 
