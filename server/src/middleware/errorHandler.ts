@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { ValidationError } from "./validateBody";
 
 export function errorHandler(
   err: unknown,
@@ -6,6 +7,9 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ) {
+  if (err instanceof ValidationError)
+    return void res.status(400).json({ errors: err.fieldErrors });
+
   console.error(err);
   res.status(500).json({ error: "Internal server error" });
 }

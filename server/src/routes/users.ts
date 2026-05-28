@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { Router } from "express";
 import { createUserSchema, editUserSchema } from "@helpdesk/core";
 import { requireAuth, requireAdmin } from "../middleware/requireAuth";
+import { validateBody } from "../middleware/validateBody";
 import prisma, { Role } from "../db";
 
 // Separate auth instance with sign-up enabled — used only for admin user creation.
@@ -30,11 +31,7 @@ router.get("/", requireAuth, requireAdmin, async (_req, res) => {
 
 // POST /api/users
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
-  const result = createUserSchema.safeParse(req.body);
-  if (!result.success)
-    return void res.status(400).json({ errors: result.error.flatten().fieldErrors });
-
-  const { name, email, password, role = "agent" } = result.data;
+  const { name, email, password, role = "agent" } = validateBody(createUserSchema, req.body);
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return void res.status(409).json({ error: "Email already in use" });
@@ -62,13 +59,10 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
 router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   const id = req.params.id as string;
 
-  const result = updateUserSchema.safeParse(req.body);
-  if (!result.success)
-    return void res.status(400).json({ errors: result.error.flatten().fieldErrors });
-
+  const parsed = validateBody(updateUserSchema, req.body);
   const data: { name?: string; email?: string; role?: Role } = {
-    ...result.data,
-    role: result.data.role as Role | undefined,
+    ...parsed,
+    role: parsed.role as Role | undefined,
   };
 
   const existing = await prisma.user.findUnique({ where: { id } });
