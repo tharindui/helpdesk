@@ -136,6 +136,14 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 
 Use the **`e2e-test-writer` agent** for all Playwright test work — writing new tests, adding coverage for existing pages, or expanding the test suite. Invoke it via the Agent tool whenever a feature is complete or tests are explicitly requested.
 
+**Run E2E tests after every code change** — before reporting a task complete, always run:
+
+```bash
+bun run --filter e2e test
+```
+
+This requires the dev servers to be running (`bun dev`). The test database is separate from dev — the E2E suite manages its own seed data. If tests fail, fix the root cause before marking the task done.
+
 ### AI Integration
 
 - Claude API (Anthropic SDK) called server-side only.
