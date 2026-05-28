@@ -4,6 +4,7 @@ import { Role } from "@helpdesk/core";
 import { authClient } from "./lib/auth-client";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import TicketsPage from "./pages/TicketsPage";
 import UsersPage from "./pages/UsersPage";
 import AppLayout from "./components/AppLayout";
 
@@ -44,6 +45,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/tickets" element={<TicketsPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/users" element={<UsersPage />} />
             </Route>

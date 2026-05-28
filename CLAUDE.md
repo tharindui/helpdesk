@@ -122,6 +122,8 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 
 ### Unit / Component Testing (Vitest + React Testing Library)
 
+Component tests are the **primary testing layer**. Default to writing component tests for all UI logic — they run fast, need no server, and can cover every rendering case in isolation.
+
 - **Stack:** Vitest 4, React Testing Library, `@testing-library/user-event`, `happy-dom` (not jsdom — Windows EPERM issues with jsdom on Bun).
 - **Run:** `bun run --filter client test` (once) or `bun run --filter client test:watch` (watch mode). Do **not** run `vitest` directly or `bun test` — `bun test` invokes Bun's built-in runner instead of Vitest.
 - **File structure:** test files live in a `__tests__/` subdirectory next to the source file, split into three modules:
@@ -131,10 +133,20 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 - **Mocking axios:** mock `@/lib/axios` with a `vi.fn()` object; use `vi.mocked(api.get).mockResolvedValue(...)` — never use `as ReturnType<typeof vi.fn>` casts (causes IDE type errors).
 - **QueryClient in tests:** create a fresh `QueryClient` per test with `retry: false` (so errors surface immediately without retry delays).
 - **`@testing-library/dom`** must be installed explicitly as a dev dependency — Bun does not auto-install peer dependencies, and `@testing-library/react` re-exports `screen`, `waitFor`, `within` from it.
+- **What belongs here:** loading/skeleton states, error states, empty states, badge rendering, data display, counts, date formatting, render order — anything that can be verified by mocking the API response.
 
 ### E2E Testing (Playwright)
 
-Use the **`e2e-test-writer` agent** for all Playwright test work — writing new tests, adding coverage for existing pages, or expanding the test suite. Invoke it via the Agent tool whenever a feature is complete or tests are explicitly requested.
+E2E tests are reserved for scenarios that **cannot be covered by component tests**: real browser navigation, real auth cookie flows, routing/redirects, and full-stack integration (e.g. webhook → DB → UI). Do not write E2E tests for UI rendering logic already covered by component tests.
+
+**When to write E2E tests:**
+- Auth redirects (unauthenticated → `/login`, role-gated pages → `/`)
+- Navigation (clicking nav links, verifying URL changes)
+- Full-stack flows that require a real server and database
+
+**When NOT to write E2E tests:** loading states, error messages, badge/label rendering, count displays, date formatting — use component tests for all of these.
+
+Use the **`e2e-test-writer` agent** for all Playwright test work. Invoke it via the Agent tool whenever a feature is complete or E2E tests are explicitly requested — but only for the integration concerns listed above.
 
 **Run E2E tests after every code change** — before reporting a task complete, always run:
 

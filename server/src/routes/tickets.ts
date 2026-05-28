@@ -1,11 +1,31 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validateBody } from "../middleware/validateBody";
+import { requireAuth } from "../middleware/requireAuth";
 import prisma from "../db";
 
 if (!process.env.WEBHOOK_SECRET) throw new Error("WEBHOOK_SECRET must be set");
 
 const router = Router();
+
+const ticketSelect = {
+  id: true,
+  fromEmail: true,
+  fromName: true,
+  subject: true,
+  status: true,
+  category: true,
+  createdAt: true,
+} as const;
+
+// GET /api/tickets — newest first
+router.get("/", requireAuth, async (_req, res) => {
+  const tickets = await prisma.ticket.findMany({
+    orderBy: { createdAt: "desc" },
+    select: ticketSelect,
+  });
+  res.json(tickets);
+});
 
 const inboundEmailSchema = z.object({
   from: z.string().email("Invalid sender email"),
@@ -25,13 +45,13 @@ router.post("/inbound", async (req, res) => {
 
   const existing = await prisma.ticket.findFirst({
     where: { fromEmail: from, subject, body },
-    select: { id: true, fromEmail: true, fromName: true, subject: true, status: true, createdAt: true },
+    select: ticketSelect,
   });
   if (existing) return void res.status(409).json({ error: "Ticket already exists", ticket: existing });
 
   const ticket = await prisma.ticket.create({
     data: { fromEmail: from, fromName, subject, body },
-    select: { id: true, fromEmail: true, fromName: true, subject: true, status: true, createdAt: true },
+    select: ticketSelect,
   });
 
   res.status(201).json(ticket);

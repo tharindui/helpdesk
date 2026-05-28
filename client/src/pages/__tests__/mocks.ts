@@ -1,6 +1,7 @@
 import type { User } from "../usersApi";
+import type { Ticket } from "../ticketsApi";
 
-export type { User };
+export type { User, Ticket };
 
 export function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -9,6 +10,19 @@ export function makeUser(overrides: Partial<User> = {}): User {
     email: "alice@example.com",
     role: "agent",
     createdAt: "2024-01-15T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
+  return {
+    id: 1,
+    fromEmail: "customer@example.com",
+    fromName: "Jane Customer",
+    subject: "Help needed",
+    status: "open",
+    category: null,
+    createdAt: "2024-03-10T09:00:00.000Z",
     ...overrides,
   };
 }
