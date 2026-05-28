@@ -5,7 +5,8 @@
     "dev": "bun --watch src/index.ts",
     "build": "tsc",
     "start": "bun dist/index.js",
-    "seed": "bun --env-file=.env prisma/seed.ts"
+    "seed": "bun --env-file=.env prisma/seed.ts",
+    "seed:tickets": "bun --env-file=.env prisma/seed-tickets.ts"
   },
   "dependencies": {
     "@helpdesk/core": "workspace:*",

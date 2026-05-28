@@ -18,10 +18,28 @@ const ticketSelect = {
   createdAt: true,
 } as const;
 
-// GET /api/tickets — newest first
-router.get("/", requireAuth, async (_req, res) => {
+const SORTABLE_FIELDS = [
+  "subject",
+  "fromName",
+  "fromEmail",
+  "status",
+  "category",
+  "createdAt",
+] as const;
+
+const sortQuerySchema = z.object({
+  sortBy: z.enum(SORTABLE_FIELDS).optional().default("createdAt"),
+  sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
+});
+
+router.get("/", requireAuth, async (req, res) => {
+  const result = sortQuerySchema.safeParse(req.query);
+  const { sortBy, sortDir } = result.success
+    ? result.data
+    : { sortBy: "createdAt" as const, sortDir: "desc" as const };
+
   const tickets = await prisma.ticket.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: sortDir },
     select: ticketSelect,
   });
   res.json(tickets);

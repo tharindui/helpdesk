@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { type SortingState } from "@tanstack/react-table";
 import { useTickets } from "./useTickets";
 import { TicketTable, TicketTableSkeleton } from "./TicketTable";
 
 export default function TicketsPage() {
-  const { data: tickets = [], isPending, isError } = useTickets();
+  const [sorting, setSorting] = useState<SortingState>([{ id: "createdAt", desc: true }]);
+  const { data: tickets = [], isPending, isError } = useTickets(sorting);
 
   if (isPending) {
     return (
@@ -36,7 +39,7 @@ export default function TicketsPage() {
           <p className="text-sm text-muted-foreground">No tickets yet.</p>
         </div>
       ) : (
-        <TicketTable tickets={tickets} />
+        <TicketTable tickets={tickets} sorting={sorting} onSortingChange={setSorting} />
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import { TicketStatus, TicketCategory } from "@helpdesk/core";
 import type { User } from "../usersApi";
 import type { Ticket } from "../ticketsApi";
 
@@ -20,7 +21,7 @@ export function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
     fromEmail: "customer@example.com",
     fromName: "Jane Customer",
     subject: "Help needed",
-    status: "open",
+    status: TicketStatus.open,
     category: null,
     createdAt: "2024-03-10T09:00:00.000Z",
     ...overrides,
@@ -33,3 +34,5 @@ export function makeAxiosError(message: string) {
     response: { data: { error: message } },
   };
 }
+
+export { TicketStatus, TicketCategory };

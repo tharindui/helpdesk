@@ -11,7 +11,7 @@ vi.mock("@/lib/axios", () => ({
 }));
 
 import api from "@/lib/axios";
-import { makeTicket } from "./mocks";
+import { makeTicket, TicketStatus, TicketCategory } from "./mocks";
 import { renderTicketsPage } from "./renders";
 
 beforeEach(() => vi.clearAllMocks());
@@ -100,7 +100,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders an Open badge for open tickets", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: "open" })] });
+      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: TicketStatus.open })] });
 
       renderTicketsPage();
 
@@ -110,7 +110,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders a Resolved badge for resolved tickets", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: "resolved" })] });
+      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: TicketStatus.resolved })] });
 
       renderTicketsPage();
 
@@ -120,7 +120,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders a Closed badge for closed tickets", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: "closed" })] });
+      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: TicketStatus.closed })] });
 
       renderTicketsPage();
 
@@ -142,9 +142,9 @@ describe("TicketsPage", () => {
     it("renders category badges for tickets that have a category", async () => {
       vi.mocked(api.get).mockResolvedValue({
         data: [
-          makeTicket({ id: 1, category: "general_question" }),
-          makeTicket({ id: 2, category: "technical_question" }),
-          makeTicket({ id: 3, category: "refund_request" }),
+          makeTicket({ id: 1, category: TicketCategory.general_question }),
+          makeTicket({ id: 2, category: TicketCategory.technical_question }),
+          makeTicket({ id: 3, category: TicketCategory.refund_request }),
         ],
       });
 

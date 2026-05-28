@@ -11,6 +11,9 @@ export type Ticket = {
   createdAt: string;
 };
 
+export type TicketSortParams = { sortBy: string; sortDir: "asc" | "desc" };
+
 export const ticketsApi = {
-  list: () => api.get<Ticket[]>("/api/tickets").then((r) => r.data),
+  list: (sort?: TicketSortParams) =>
+    api.get<Ticket[]>("/api/tickets", { params: sort }).then((r) => r.data),
 };

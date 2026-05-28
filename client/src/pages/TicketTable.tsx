@@ -1,6 +1,19 @@
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  type OnChangeFn,
+  type SortingState,
+} from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { TicketStatus, TicketCategory } from "@helpdesk/core";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Ticket } from "./ticketsApi";
+
+// ---------------------------------------------------------------------------
+// Skeleton
+// ---------------------------------------------------------------------------
 
 export function TicketTableSkeleton() {
   return (
@@ -31,44 +44,129 @@ export function TicketTableSkeleton() {
   );
 }
 
-export function TicketTable({ tickets }: { tickets: Ticket[] }) {
+// ---------------------------------------------------------------------------
+// Column definitions (stable module-level reference)
+// ---------------------------------------------------------------------------
+
+const columnHelper = createColumnHelper<Ticket>();
+
+const columns = [
+  columnHelper.accessor("subject", {
+    header: "Subject",
+    enableSorting: true,
+    cell: (info) => (
+      <span className="font-medium text-foreground max-w-xs truncate block">
+        {info.getValue()}
+      </span>
+    ),
+  }),
+  columnHelper.accessor("fromName", {
+    id: "fromName",
+    header: "From",
+    enableSorting: true,
+    cell: (info) => (
+      <>
+        <span className="block text-foreground">{info.getValue()}</span>
+        <span className="block text-xs text-muted-foreground">
+          {info.row.original.fromEmail}
+        </span>
+      </>
+    ),
+  }),
+  columnHelper.accessor("status", {
+    header: "Status",
+    enableSorting: true,
+    cell: (info) => <StatusBadge status={info.getValue()} />,
+  }),
+  columnHelper.accessor("category", {
+    header: "Category",
+    enableSorting: true,
+    cell: (info) =>
+      info.getValue() ? (
+        <CategoryBadge category={info.getValue()!} />
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      ),
+  }),
+  columnHelper.accessor("createdAt", {
+    header: "Received",
+    enableSorting: true,
+    cell: (info) =>
+      new Date(info.getValue()).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+  }),
+];
+
+// ---------------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------------
+
+type Props = {
+  tickets: Ticket[];
+  sorting: SortingState;
+  onSortingChange: OnChangeFn<SortingState>;
+};
+
+export function TicketTable({ tickets, sorting, onSortingChange }: Props) {
+  const table = useReactTable({
+    data: tickets,
+    columns,
+    state: { sorting },
+    onSortingChange,
+    manualSorting: true,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   return (
     <div className="rounded-lg border border-border overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border bg-muted/40">
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Subject</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">From</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Category</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Received</th>
-          </tr>
+          {table.getHeaderGroups().map((hg) => (
+            <tr key={hg.id} className="border-b border-border bg-muted/40">
+              {hg.headers.map((header) => {
+                const sorted = header.column.getIsSorted();
+                return (
+                  <th
+                    key={header.id}
+                    className="px-4 py-3 text-left font-medium text-muted-foreground"
+                  >
+                    {header.column.getCanSort() ? (
+                      <button
+                        onClick={header.column.getToggleSortingHandler()}
+                        className="inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {sorted === "asc" ? (
+                          <ArrowUp className="w-3 h-3" />
+                        ) : sorted === "desc" ? (
+                          <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-40" />
+                        )}
+                      </button>
+                    ) : (
+                      flexRender(header.column.columnDef.header, header.getContext())
+                    )}
+                  </th>
+                );
+              })}
+            </tr>
+          ))}
         </thead>
         <tbody>
-          {tickets.map((ticket, i) => (
-            <tr key={ticket.id} className={i < tickets.length - 1 ? "border-b border-border" : ""}>
-              <td className="px-4 py-3 font-medium text-foreground max-w-xs truncate">
-                {ticket.subject}
-              </td>
-              <td className="px-4 py-3">
-                <span className="block text-foreground">{ticket.fromName}</span>
-                <span className="block text-xs text-muted-foreground">{ticket.fromEmail}</span>
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge status={ticket.status} />
-              </td>
-              <td className="px-4 py-3">
-                {ticket.category
-                  ? <CategoryBadge category={ticket.category} />
-                  : <span className="text-muted-foreground">—</span>}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">
-                {new Date(ticket.createdAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </td>
+          {table.getRowModel().rows.map((row, i) => (
+            <tr
+              key={row.id}
+              className={i < tickets.length - 1 ? "border-b border-border" : ""}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <td key={cell.id} className="px-4 py-3 text-muted-foreground">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -76,6 +174,10 @@ export function TicketTable({ tickets }: { tickets: Ticket[] }) {
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Badges
+// ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status: TicketStatus }) {
   if (status === TicketStatus.open) {
