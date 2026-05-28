@@ -20,9 +20,10 @@ const router = Router();
 // PATCH accepts partial updates; derive from the shared edit schema.
 const updateUserSchema = editUserSchema.partial();
 
-// GET /api/users
+// GET /api/users — excludes soft-deleted users
 router.get("/", requireAuth, requireAdmin, async (_req, res) => {
   const users = await prisma.user.findMany({
+    where: { deletedAt: null },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { createdAt: "asc" },
   });
@@ -33,7 +34,7 @@ router.get("/", requireAuth, requireAdmin, async (_req, res) => {
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
   const { name, email, password, role = "agent" } = validateBody(createUserSchema, req.body);
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findFirst({ where: { email, deletedAt: null } });
   if (existing) return void res.status(409).json({ error: "Email already in use" });
 
   const created = await adminAuth.api.signUpEmail({
@@ -66,10 +67,10 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   };
 
   const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing) return void res.status(404).json({ error: "User not found" });
+  if (!existing || existing.deletedAt) return void res.status(404).json({ error: "User not found" });
 
   if (data.email && data.email !== existing.email) {
-    const taken = await prisma.user.findUnique({ where: { email: data.email } });
+    const taken = await prisma.user.findFirst({ where: { email: data.email, deletedAt: null } });
     if (taken) return void res.status(409).json({ error: "Email already in use" });
   }
 
@@ -82,7 +83,7 @@ router.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
   res.json(updated);
 });
 
-// DELETE /api/users/:id
+// DELETE /api/users/:id — soft delete: sets deletedAt instead of removing the row
 router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
   const id = req.params.id as string;
 
@@ -90,9 +91,10 @@ router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
     return void res.status(400).json({ error: "You cannot delete your own account" });
 
   const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing) return void res.status(404).json({ error: "User not found" });
+  if (!existing || existing.deletedAt) return void res.status(404).json({ error: "User not found" });
 
-  await prisma.user.delete({ where: { id } });
+  await prisma.user.update({ where: { id }, data: { deletedAt: new Date() } });
+  await prisma.session.deleteMany({ where: { userId: id } });
   res.status(204).end();
 });
 

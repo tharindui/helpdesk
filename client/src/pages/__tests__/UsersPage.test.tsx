@@ -294,6 +294,30 @@ describe("UsersPage", () => {
 
       expect(api.post).not.toHaveBeenCalled();
     });
+
+    it("clears the server error when the dialog is closed and reopened", async () => {
+      vi.mocked(api.post).mockRejectedValue(makeAxiosError("Email already in use"));
+
+      const ue = await openAddDialog();
+      const dialog = screen.getByRole("dialog");
+
+      await ue.type(within(dialog).getByLabelText("Name"), "Test User");
+      await ue.type(within(dialog).getByLabelText("Email"), "test@example.com");
+      await ue.type(within(dialog).getByLabelText("Password"), "password123");
+      await ue.click(screen.getByRole("button", { name: /create user/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent("Email already in use");
+      });
+
+      await ue.click(screen.getByRole("button", { name: /cancel/i }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+      await ue.click(screen.getByRole("button", { name: /add user/i }));
+      await waitFor(() => screen.getByRole("dialog"));
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
   });
 
   describe("Edit User dialog", () => {
@@ -323,6 +347,12 @@ describe("UsersPage", () => {
 
       expect(screen.getByRole("dialog")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /edit user/i })).toBeInTheDocument();
+    });
+
+    it("does not show a Password field in edit mode", async () => {
+      await openEditDialog();
+
+      expect(within(screen.getByRole("dialog")).queryByLabelText("Password")).not.toBeInTheDocument();
     });
 
     it("pre-populates the Name field with the user's current name", async () => {

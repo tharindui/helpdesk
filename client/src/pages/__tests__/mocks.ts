@@ -1,10 +1,6 @@
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "agent";
-  createdAt: string;
-};
+import type { User } from "../usersApi";
+
+export type { User };
 
 export function makeUser(overrides: Partial<User> = {}): User {
   return {
