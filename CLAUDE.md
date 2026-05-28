@@ -16,7 +16,7 @@ AI-powered helpdesk ticket management system. Support emails arrive via webhook,
 
 ## Monorepo Structure
 
-Bun workspaces with two packages: `client/` (React + Vite) and `server/` (Node.js + Express + Bun runtime).
+Bun workspaces with three packages: `client/` (React + Vite), `server/` (Node.js + Express + Bun runtime), and `core/` (shared Zod schemas, imported by both as `@helpdesk/core`). The client resolves `@helpdesk/core` via a Vite alias pointing directly at `core/src/index.ts`.
 
 ## Commands
 
@@ -102,10 +102,14 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 ### Validation (Zod)
 
 - Use **Zod** for all data validation at system boundaries: API request bodies (server-side), form inputs (client-side), and external data (webhook payloads, API responses).
-- Define schemas in a `schemas/` file co-located with the route or form they validate. Share schemas between client and server only if they live in a shared package — otherwise duplicate to keep packages independent.
+- **Shared schemas live in `core/src/schemas/`.** Any schema used by both client and server must be defined there and imported from `@helpdesk/core` — never duplicate a schema across packages. Server-only or client-only schemas stay local to that package.
 - Server: parse request bodies with `schema.safeParse(req.body)`; on failure return `400` with `{ errors: result.error.flatten().fieldErrors }`.
-- Client: use Zod with **React Hook Form** (`@hookform/resolvers/zod`) — pass `zodResolver(schema)` to `useForm`. Never use Zod `.parse()` in render paths; use `.safeParse()` so errors don't throw.
+- Client: use **React Hook Form** with `zodResolver` from `@hookform/resolvers/zod`. Pass `zodResolver(schema)` to `useForm<z.infer<typeof schema>>`. Use `register`, `handleSubmit`, and `formState.errors` — never manage form state manually with `useState`.
+- Render field errors with `{errors.field && <p className="text-xs text-destructive">{errors.field.message}</p>}` and `aria-invalid={!!errors.field}` on the input.
+- Never use Zod `.parse()` in render paths; use `.safeParse()` so errors don't throw.
 - Infer TypeScript types from schemas with `z.infer<typeof schema>` — do not maintain separate interface/type definitions for validated shapes.
+- Always put `.trim()` before `.min(1)` on string fields so whitespace-only input is rejected after trimming.
+- Do **not** use `.default()` in shared schemas — it makes the Zod input type optional, which conflicts with `useForm<z.infer<typeof schema>>`. Apply defaults in server route code instead (e.g. `const { role = "agent" } = result.data`).
 
 ### Database
 

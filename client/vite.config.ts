@@ -9,9 +9,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@helpdesk/core": path.resolve(__dirname, "../core/src/index.ts"),
     },
   },
   server: {
+    fs: {
+      allow: [".."],
+    },
     proxy: {
       "/api": {
         target: process.env.VITE_API_URL ?? "http://localhost:3000",
@@ -25,6 +29,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@helpdesk/core": path.resolve(__dirname, "../core/src/index.ts"),
     },
   },
 });

@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { Router } from "express";
-import { z } from "zod";
+import { createUserSchema, editUserSchema } from "@helpdesk/core";
 import { requireAuth, requireAdmin } from "../middleware/requireAuth";
 import prisma, { Role } from "../db";
 
@@ -16,18 +16,8 @@ const adminAuth = betterAuth({
 
 const router = Router();
 
-const createUserSchema = z.object({
-  name: z.string().trim().min(1, "Name is required"),
-  email: z.string().email("Valid email is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["admin", "agent"]).default("agent"),
-});
-
-const updateUserSchema = z.object({
-  name: z.string().trim().min(1, "Name cannot be empty").optional(),
-  email: z.string().email("Valid email is required").optional(),
-  role: z.enum(["admin", "agent"]).optional(),
-});
+// PATCH accepts partial updates; derive from the shared edit schema.
+const updateUserSchema = editUserSchema.partial();
 
 // GET /api/users
 router.get("/", requireAuth, requireAdmin, async (_req, res) => {
@@ -44,7 +34,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
   if (!result.success)
     return void res.status(400).json({ errors: result.error.flatten().fieldErrors });
 
-  const { name, email, password, role } = result.data;
+  const { name, email, password, role = "agent" } = result.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return void res.status(409).json({ error: "Email already in use" });
