@@ -12,6 +12,8 @@ export type User = {
   createdAt: string;
 };
 
+export type Assignee = { id: string; name: string };
+
 export function extractError(err: unknown): string {
   if (axios.isAxiosError(err)) return err.response?.data?.error ?? "Request failed";
   return "Request failed";
@@ -19,6 +21,7 @@ export function extractError(err: unknown): string {
 
 export const usersApi = {
   list: () => api.get<User[]>("/api/users").then((r) => r.data),
+  listAssignable: () => api.get<Assignee[]>("/api/users/assignable").then((r) => r.data),
   create: (data: CreateUserData) => api.post<User>("/api/users", data).then((r) => r.data),
   update: ({ id, data }: { id: string; data: EditUserData }) =>
     api.patch<User>(`/api/users/${id}`, data).then((r) => r.data),

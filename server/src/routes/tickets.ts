@@ -79,13 +79,55 @@ router.get("/:id", requireAuth, async (req, res) => {
 
   const ticket = await prisma.ticket.findUnique({
     where: { id },
-    select: { ...ticketSelect, body: true },
+    select: { ...ticketSelect, body: true, assignedTo: { select: { id: true, name: true } } },
   });
 
   if (!ticket) {
     res.status(404).json({ error: "Ticket not found" });
     return;
   }
+
+  res.json(ticket);
+});
+
+const assignSchema = z.object({
+  assignedToId: z.string().min(1).nullable(),
+});
+
+router.patch("/:id", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const result = assignSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ errors: result.error.flatten().fieldErrors });
+    return;
+  }
+
+  const { assignedToId } = result.data;
+
+  if (assignedToId !== null) {
+    const user = await prisma.user.findFirst({ where: { id: assignedToId, deletedAt: null } });
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+  }
+
+  const existing = await prisma.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.update({
+    where: { id },
+    data: { assignedToId },
+    select: { ...ticketSelect, body: true, assignedTo: { select: { id: true, name: true } } },
+  });
 
   res.json(ticket);
 });

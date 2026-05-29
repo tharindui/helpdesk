@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import UsersPage from "../UsersPage";
 import TicketsPage from "../TicketsPage";
@@ -25,9 +26,11 @@ export function renderUsersPage() {
 export function renderTicketsPage() {
   const queryClient = makeQueryClient();
   const utils = render(
-    <QueryClientProvider client={queryClient}>
-      <TicketsPage />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <TicketsPage />
+      </QueryClientProvider>
+    </MemoryRouter>
   );
   return { ...utils, queryClient };
 }

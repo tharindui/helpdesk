@@ -11,7 +11,10 @@ export type Ticket = {
   createdAt: string;
 };
 
-export type TicketDetail = Ticket & { body: string };
+export type TicketDetail = Ticket & {
+  body: string;
+  assignedTo: { id: string; name: string } | null;
+};
 
 export type TicketPageResult = {
   data: Ticket[];
@@ -31,4 +34,6 @@ export const ticketsApi = {
       .then((r) => r.data),
   get: (id: number) =>
     api.get<TicketDetail>(`/api/tickets/${id}`).then((r) => r.data),
+  assign: (id: number, assignedToId: string | null) =>
+    api.patch<TicketDetail>(`/api/tickets/${id}`, { assignedToId }).then((r) => r.data),
 };

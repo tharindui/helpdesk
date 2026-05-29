@@ -1,18 +1,32 @@
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { ticketsApi } from "./ticketsApi";
+import { usersApi } from "./usersApi";
 import { StatusBadge, CategoryBadge } from "@/components/TicketBadges";
+import { AssigneeCombobox } from "@/components/AssigneeCombobox";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const ticketId = Number(id);
 
+  const queryClient = useQueryClient();
+
   const { data: ticket, isPending, isError } = useQuery({
     queryKey: ["ticket", ticketId],
     queryFn: () => ticketsApi.get(ticketId),
     enabled: !isNaN(ticketId),
+  });
+
+  const { data: assignees } = useQuery({
+    queryKey: ["users", "assignable"],
+    queryFn: usersApi.listAssignable,
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: (assignedToId: string | null) => ticketsApi.assign(ticketId, assignedToId),
+    onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
   });
 
   if (isPending) {
@@ -89,6 +103,13 @@ export default function TicketDetailPage() {
               minute: "2-digit",
             })}
           </span>
+          <span className="text-muted-foreground self-center">Assigned to</span>
+          <AssigneeCombobox
+            assignees={assignees ?? []}
+            value={ticket.assignedTo?.id ?? null}
+            onChange={(id) => assignMutation.mutate(id)}
+            disabled={assignMutation.isPending || !assignees}
+          />
         </div>
 
         <div className="px-6 py-5">
