@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { TicketStatus, TicketCategory } from "@helpdesk/core";
 import { validateBody } from "../middleware/validateBody";
 import { requireAuth } from "../middleware/requireAuth";
 import prisma from "../db";
@@ -27,18 +28,32 @@ const SORTABLE_FIELDS = [
   "createdAt",
 ] as const;
 
-const sortQuerySchema = z.object({
+const querySchema = z.object({
   sortBy: z.enum(SORTABLE_FIELDS).optional().default("createdAt"),
   sortDir: z.enum(["asc", "desc"]).optional().default("desc"),
+  status: z.nativeEnum(TicketStatus).optional(),
+  category: z.nativeEnum(TicketCategory).optional(),
+  search: z.string().trim().optional(),
 });
 
 router.get("/", requireAuth, async (req, res) => {
-  const result = sortQuerySchema.safeParse(req.query);
-  const { sortBy, sortDir } = result.success
+  const result = querySchema.safeParse(req.query);
+  const { sortBy, sortDir, status, category, search } = result.success
     ? result.data
-    : { sortBy: "createdAt" as const, sortDir: "desc" as const };
+    : { sortBy: "createdAt" as const, sortDir: "desc" as const, status: undefined, category: undefined, search: undefined };
 
   const tickets = await prisma.ticket.findMany({
+    where: {
+      ...(status !== undefined && { status }),
+      ...(category !== undefined && { category }),
+      ...(search && {
+        OR: [
+          { subject: { contains: search, mode: "insensitive" } },
+          { fromName: { contains: search, mode: "insensitive" } },
+          { fromEmail: { contains: search, mode: "insensitive" } },
+        ],
+      }),
+    },
     orderBy: { [sortBy]: sortDir },
     select: ticketSelect,
   });

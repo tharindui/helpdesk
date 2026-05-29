@@ -12,8 +12,9 @@ export type Ticket = {
 };
 
 export type TicketSortParams = { sortBy: string; sortDir: "asc" | "desc" };
+export type TicketFilterParams = { status?: TicketStatus; category?: TicketCategory; search?: string };
 
 export const ticketsApi = {
-  list: (sort?: TicketSortParams) =>
-    api.get<Ticket[]>("/api/tickets", { params: sort }).then((r) => r.data),
+  list: (sort?: TicketSortParams, filters?: TicketFilterParams) =>
+    api.get<Ticket[]>("/api/tickets", { params: { ...sort, ...filters } }).then((r) => r.data),
 };

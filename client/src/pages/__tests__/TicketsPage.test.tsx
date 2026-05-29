@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/axios", () => ({
@@ -209,6 +210,107 @@ describe("TicketsPage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("3 tickets")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("filter bar", () => {
+    it("renders the search input", () => {
+      vi.mocked(api.get).mockReturnValue(new Promise(() => {}));
+
+      renderTicketsPage();
+
+      expect(screen.getByPlaceholderText(/search by subject/i)).toBeInTheDocument();
+    });
+
+    it("renders Status and Category dropdowns", () => {
+      vi.mocked(api.get).mockReturnValue(new Promise(() => {}));
+
+      renderTicketsPage();
+
+      const comboboxes = screen.getAllByRole("combobox");
+      expect(comboboxes).toHaveLength(2);
+    });
+
+    it("calls the API with status param when a status is selected", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      const user = userEvent.setup();
+
+      renderTicketsPage();
+
+      const [statusCombobox] = screen.getAllByRole("combobox");
+      await user.click(statusCombobox);
+      await user.click(screen.getByRole("option", { name: "Open" }));
+
+      await waitFor(() => {
+        expect(vi.mocked(api.get)).toHaveBeenCalledWith("/api/tickets", {
+          params: expect.objectContaining({ status: TicketStatus.open }),
+        });
+      });
+    });
+
+    it("calls the API with category param when a category is selected", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      const user = userEvent.setup();
+
+      renderTicketsPage();
+
+      const [, categoryCombobox] = screen.getAllByRole("combobox");
+      await user.click(categoryCombobox);
+      await user.click(screen.getByRole("option", { name: "Technical" }));
+
+      await waitFor(() => {
+        expect(vi.mocked(api.get)).toHaveBeenCalledWith("/api/tickets", {
+          params: expect.objectContaining({ category: TicketCategory.technical_question }),
+        });
+      });
+    });
+
+    it("calls the API with search param after the user types", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      const user = userEvent.setup();
+
+      renderTicketsPage();
+
+      await user.type(screen.getByPlaceholderText(/search by subject/i), "login");
+
+      await waitFor(
+        () => {
+          expect(vi.mocked(api.get)).toHaveBeenCalledWith("/api/tickets", {
+            params: expect.objectContaining({ search: "login" }),
+          });
+        },
+        { timeout: 2000 },
+      );
+    });
+
+    it("shows 'No tickets match your filters.' when a status filter is active and no tickets match", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      const user = userEvent.setup();
+
+      renderTicketsPage();
+
+      const [statusCombobox] = screen.getAllByRole("combobox");
+      await user.click(statusCombobox);
+      await user.click(screen.getByRole("option", { name: "Resolved" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("No tickets match your filters.")).toBeInTheDocument();
+      });
+    });
+
+    it("shows 'No tickets match your filters.' when a category filter is active and no tickets match", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      const user = userEvent.setup();
+
+      renderTicketsPage();
+
+      const [, categoryCombobox] = screen.getAllByRole("combobox");
+      await user.click(categoryCombobox);
+      await user.click(screen.getByRole("option", { name: "Refund" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("No tickets match your filters.")).toBeInTheDocument();
       });
     });
   });
