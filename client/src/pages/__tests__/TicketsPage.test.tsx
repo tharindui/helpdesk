@@ -12,7 +12,7 @@ vi.mock("@/lib/axios", () => ({
 }));
 
 import api from "@/lib/axios";
-import { makeTicket, TicketStatus, TicketCategory } from "./mocks";
+import { makeTicket, makeTicketPage, TicketStatus, TicketCategory } from "./mocks";
 import { renderTicketsPage } from "./renders";
 
 beforeEach(() => vi.clearAllMocks());
@@ -49,7 +49,7 @@ describe("TicketsPage", () => {
 
   describe("empty state", () => {
     it("renders an empty-state message when no tickets are returned", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
 
       renderTicketsPage();
 
@@ -59,7 +59,7 @@ describe("TicketsPage", () => {
     });
 
     it("shows '0 tickets' in the subtitle", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
 
       renderTicketsPage();
 
@@ -71,7 +71,7 @@ describe("TicketsPage", () => {
 
   describe("populated table", () => {
     it("renders the page heading", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket()] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()]) });
 
       renderTicketsPage();
 
@@ -82,10 +82,10 @@ describe("TicketsPage", () => {
 
     it("renders subject, sender name and email for each ticket", async () => {
       vi.mocked(api.get).mockResolvedValue({
-        data: [
+        data: makeTicketPage([
           makeTicket({ id: 1, subject: "Login broken", fromName: "Alice", fromEmail: "alice@example.com" }),
           makeTicket({ id: 2, subject: "Refund request", fromName: "Bob", fromEmail: "bob@example.com" }),
-        ],
+        ]),
       });
 
       renderTicketsPage();
@@ -101,7 +101,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders an Open badge for open tickets", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: TicketStatus.open })] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket({ status: TicketStatus.open })]) });
 
       renderTicketsPage();
 
@@ -111,7 +111,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders a Resolved badge for resolved tickets", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: TicketStatus.resolved })] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket({ status: TicketStatus.resolved })]) });
 
       renderTicketsPage();
 
@@ -121,7 +121,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders a Closed badge for closed tickets", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ status: TicketStatus.closed })] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket({ status: TicketStatus.closed })]) });
 
       renderTicketsPage();
 
@@ -131,7 +131,7 @@ describe("TicketsPage", () => {
     });
 
     it("renders '—' when a ticket has no category", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket({ category: null })] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket({ category: null })]) });
 
       renderTicketsPage();
 
@@ -142,11 +142,11 @@ describe("TicketsPage", () => {
 
     it("renders category badges for tickets that have a category", async () => {
       vi.mocked(api.get).mockResolvedValue({
-        data: [
+        data: makeTicketPage([
           makeTicket({ id: 1, category: TicketCategory.general_question }),
           makeTicket({ id: 2, category: TicketCategory.technical_question }),
           makeTicket({ id: 3, category: TicketCategory.refund_request }),
-        ],
+        ]),
       });
 
       renderTicketsPage();
@@ -160,7 +160,7 @@ describe("TicketsPage", () => {
 
     it("formats the Received date as 'Mar 10, 2024'", async () => {
       vi.mocked(api.get).mockResolvedValue({
-        data: [makeTicket({ createdAt: "2024-03-10T09:00:00.000Z" })],
+        data: makeTicketPage([makeTicket({ createdAt: "2024-03-10T09:00:00.000Z" })]),
       });
 
       renderTicketsPage();
@@ -172,10 +172,10 @@ describe("TicketsPage", () => {
 
     it("renders tickets in the order returned by the API", async () => {
       vi.mocked(api.get).mockResolvedValue({
-        data: [
+        data: makeTicketPage([
           makeTicket({ id: 1, subject: "Newest ticket" }),
           makeTicket({ id: 2, subject: "Older ticket" }),
-        ],
+        ]),
       });
 
       renderTicketsPage();
@@ -192,7 +192,7 @@ describe("TicketsPage", () => {
     });
 
     it("shows '1 ticket' singular when there is exactly one ticket", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [makeTicket()] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()], 1) });
 
       renderTicketsPage();
 
@@ -201,15 +201,75 @@ describe("TicketsPage", () => {
       });
     });
 
-    it("shows correct plural count in the subtitle", async () => {
+    it("shows the total count from the server in the subtitle", async () => {
       vi.mocked(api.get).mockResolvedValue({
-        data: [makeTicket({ id: 1 }), makeTicket({ id: 2 }), makeTicket({ id: 3 })],
+        data: makeTicketPage([makeTicket({ id: 1 }), makeTicket({ id: 2 })], 47),
       });
 
       renderTicketsPage();
 
       await waitFor(() => {
-        expect(screen.getByText("3 tickets")).toBeInTheDocument();
+        expect(screen.getByText("47 tickets")).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe("pagination", () => {
+    it("does not render pagination controls when all tickets fit on one page", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()], 1) });
+
+      renderTicketsPage();
+
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: /previous/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+      });
+    });
+
+    it("renders Previous and Next buttons when there are multiple pages", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()], 25) });
+
+      renderTicketsPage();
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /previous/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+      });
+    });
+
+    it("disables the Previous button on the first page", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()], 25) });
+
+      renderTicketsPage();
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /previous/i })).toBeDisabled();
+      });
+    });
+
+    it("shows the correct page indicator", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()], 25) });
+
+      renderTicketsPage();
+
+      await waitFor(() => {
+        expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+      });
+    });
+
+    it("advances to the next page when Next is clicked", async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([makeTicket()], 25) });
+      const user = userEvent.setup();
+
+      renderTicketsPage();
+
+      await waitFor(() => screen.getByRole("button", { name: /next/i }));
+      await user.click(screen.getByRole("button", { name: /next/i }));
+
+      await waitFor(() => {
+        expect(vi.mocked(api.get)).toHaveBeenCalledWith("/api/tickets", {
+          params: expect.objectContaining({ page: 2 }),
+        });
       });
     });
   });
@@ -233,7 +293,7 @@ describe("TicketsPage", () => {
     });
 
     it("calls the API with status param when a status is selected", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
       const user = userEvent.setup();
 
       renderTicketsPage();
@@ -250,7 +310,7 @@ describe("TicketsPage", () => {
     });
 
     it("calls the API with category param when a category is selected", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
       const user = userEvent.setup();
 
       renderTicketsPage();
@@ -267,7 +327,7 @@ describe("TicketsPage", () => {
     });
 
     it("calls the API with search param after the user types", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
       const user = userEvent.setup();
 
       renderTicketsPage();
@@ -285,7 +345,7 @@ describe("TicketsPage", () => {
     });
 
     it("shows 'No tickets match your filters.' when a status filter is active and no tickets match", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
       const user = userEvent.setup();
 
       renderTicketsPage();
@@ -300,7 +360,7 @@ describe("TicketsPage", () => {
     });
 
     it("shows 'No tickets match your filters.' when a category filter is active and no tickets match", async () => {
-      vi.mocked(api.get).mockResolvedValue({ data: [] });
+      vi.mocked(api.get).mockResolvedValue({ data: makeTicketPage([]) });
       const user = userEvent.setup();
 
       renderTicketsPage();

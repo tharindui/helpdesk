@@ -1,8 +1,8 @@
 import { TicketStatus, TicketCategory } from "@helpdesk/core";
 import type { User } from "../usersApi";
-import type { Ticket } from "../ticketsApi";
+import type { Ticket, TicketPageResult } from "../ticketsApi";
 
-export type { User, Ticket };
+export type { User, Ticket, TicketPageResult };
 
 export function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -33,6 +33,10 @@ export function makeAxiosError(message: string) {
     isAxiosError: true,
     response: { data: { error: message } },
   };
+}
+
+export function makeTicketPage(tickets: Ticket[] = [], total?: number): TicketPageResult {
+  return { data: tickets, total: total ?? tickets.length, page: 1, pageSize: 10 };
 }
 
 export { TicketStatus, TicketCategory };

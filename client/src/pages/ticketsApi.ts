@@ -11,10 +11,20 @@ export type Ticket = {
   createdAt: string;
 };
 
+export type TicketPageResult = {
+  data: Ticket[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type TicketSortParams = { sortBy: string; sortDir: "asc" | "desc" };
 export type TicketFilterParams = { status?: TicketStatus; category?: TicketCategory; search?: string };
+export type TicketPaginationParams = { page: number; pageSize: number };
 
 export const ticketsApi = {
-  list: (sort?: TicketSortParams, filters?: TicketFilterParams) =>
-    api.get<Ticket[]>("/api/tickets", { params: { ...sort, ...filters } }).then((r) => r.data),
+  list: (sort?: TicketSortParams, filters?: TicketFilterParams, pagination?: TicketPaginationParams) =>
+    api
+      .get<TicketPageResult>("/api/tickets", { params: { ...sort, ...filters, ...pagination } })
+      .then((r) => r.data),
 };

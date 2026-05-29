@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { type SortingState } from "@tanstack/react-table";
 import { TicketStatus, TicketCategory } from "@helpdesk/core";
-import { Search } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -10,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTickets } from "./useTickets";
+import { useTickets, PAGE_SIZE } from "./useTickets";
 import { TicketTable, TicketTableSkeleton } from "./TicketTable";
 
 export default function TicketsPage() {
@@ -19,19 +20,33 @@ export default function TicketsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<TicketCategory | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { data: tickets = [], isPending, isError } = useTickets(sorting, {
+  // Reset to page 1 whenever filters or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, categoryFilter, search]);
+
+  const { data, isPending, isError } = useTickets(sorting, {
     status: statusFilter,
     category: categoryFilter,
     search,
-  });
+  }, currentPage);
 
+  const tickets = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = statusFilter !== null || categoryFilter !== null || search !== "";
+
+  const handleSortingChange = (updater: SortingState | ((prev: SortingState) => SortingState)) => {
+    setSorting(updater);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="py-8">
@@ -45,7 +60,7 @@ export default function TicketsPage() {
           <>
             <h1 className="text-2xl font-semibold text-foreground">Tickets</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {tickets.length} {tickets.length === 1 ? "ticket" : "tickets"}
+              {total} {total === 1 ? "ticket" : "tickets"}
             </p>
           </>
         )}
@@ -108,7 +123,33 @@ export default function TicketsPage() {
           </p>
         </div>
       ) : (
-        <TicketTable tickets={tickets} sorting={sorting} onSortingChange={setSorting} />
+        <TicketTable tickets={tickets} sorting={sorting} onSortingChange={handleSortingChange} />
+      )}
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            <ChevronLeft className="size-4" />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            Next
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
       )}
     </div>
   );

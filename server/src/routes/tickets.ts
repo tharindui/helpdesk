@@ -34,30 +34,40 @@ const querySchema = z.object({
   status: z.nativeEnum(TicketStatus).optional(),
   category: z.nativeEnum(TicketCategory).optional(),
   search: z.string().trim().optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(10),
 });
 
 router.get("/", requireAuth, async (req, res) => {
   const result = querySchema.safeParse(req.query);
-  const { sortBy, sortDir, status, category, search } = result.success
+  const { sortBy, sortDir, status, category, search, page, pageSize } = result.success
     ? result.data
-    : { sortBy: "createdAt" as const, sortDir: "desc" as const, status: undefined, category: undefined, search: undefined };
+    : { sortBy: "createdAt" as const, sortDir: "desc" as const, status: undefined, category: undefined, search: undefined, page: 1, pageSize: 10 };
 
-  const tickets = await prisma.ticket.findMany({
-    where: {
-      ...(status !== undefined && { status }),
-      ...(category !== undefined && { category }),
-      ...(search && {
-        OR: [
-          { subject: { contains: search, mode: "insensitive" } },
-          { fromName: { contains: search, mode: "insensitive" } },
-          { fromEmail: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-    },
-    orderBy: { [sortBy]: sortDir },
-    select: ticketSelect,
-  });
-  res.json(tickets);
+  const where = {
+    ...(status !== undefined && { status }),
+    ...(category !== undefined && { category }),
+    ...(search && {
+      OR: [
+        { subject: { contains: search, mode: "insensitive" as const } },
+        { fromName: { contains: search, mode: "insensitive" as const } },
+        { fromEmail: { contains: search, mode: "insensitive" as const } },
+      ],
+    }),
+  };
+
+  const [data, total] = await prisma.$transaction([
+    prisma.ticket.findMany({
+      where,
+      orderBy: { [sortBy]: sortDir },
+      select: ticketSelect,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  res.json({ data, total, page, pageSize });
 });
 
 const inboundEmailSchema = z.object({
