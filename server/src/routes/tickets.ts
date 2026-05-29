@@ -90,8 +90,10 @@ router.get("/:id", requireAuth, async (req, res) => {
   res.json(ticket);
 });
 
-const assignSchema = z.object({
-  assignedToId: z.string().min(1).nullable(),
+const patchSchema = z.object({
+  assignedToId: z.string().min(1).nullable().optional(),
+  status: z.nativeEnum(TicketStatus).optional(),
+  category: z.nativeEnum(TicketCategory).nullable().optional(),
 });
 
 router.patch("/:id", requireAuth, async (req, res) => {
@@ -101,15 +103,15 @@ router.patch("/:id", requireAuth, async (req, res) => {
     return;
   }
 
-  const result = assignSchema.safeParse(req.body);
+  const result = patchSchema.safeParse(req.body);
   if (!result.success) {
     res.status(400).json({ errors: result.error.flatten().fieldErrors });
     return;
   }
 
-  const { assignedToId } = result.data;
+  const { assignedToId, status, category } = result.data;
 
-  if (assignedToId !== null) {
+  if (assignedToId !== undefined && assignedToId !== null) {
     const user = await prisma.user.findFirst({ where: { id: assignedToId, deletedAt: null } });
     if (!user) {
       res.status(404).json({ error: "User not found" });
@@ -125,7 +127,11 @@ router.patch("/:id", requireAuth, async (req, res) => {
 
   const ticket = await prisma.ticket.update({
     where: { id },
-    data: { assignedToId },
+    data: {
+      ...(assignedToId !== undefined && { assignedToId }),
+      ...(status !== undefined && { status }),
+      ...(category !== undefined && { category }),
+    },
     select: { ...ticketSelect, body: true, assignedTo: { select: { id: true, name: true } } },
   });
 

@@ -1,9 +1,9 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
+import { TicketStatus, TicketCategory } from "@helpdesk/core";
 import { ticketsApi } from "./ticketsApi";
 import { usersApi } from "./usersApi";
-import { StatusBadge, CategoryBadge } from "@/components/TicketBadges";
 import { AssigneeCombobox } from "@/components/AssigneeCombobox";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,7 +25,17 @@ export default function TicketDetailPage() {
   });
 
   const assignMutation = useMutation({
-    mutationFn: (assignedToId: string | null) => ticketsApi.assign(ticketId, assignedToId),
+    mutationFn: (assignedToId: string | null) => ticketsApi.update(ticketId, { assignedToId }),
+    onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: TicketStatus) => ticketsApi.update(ticketId, { status }),
+    onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
+  });
+
+  const categoryMutation = useMutation({
+    mutationFn: (category: TicketCategory | null) => ticketsApi.update(ticketId, { category }),
     onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
   });
 
@@ -82,8 +92,16 @@ export default function TicketDetailPage() {
         <div className="border-b border-border px-6 py-4 space-y-3">
           <h1 className="text-xl font-semibold text-foreground">{ticket.subject}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={ticket.status} />
-            {ticket.category && <CategoryBadge category={ticket.category} />}
+            <StatusSelect
+              value={ticket.status}
+              onChange={(s) => statusMutation.mutate(s)}
+              disabled={statusMutation.isPending}
+            />
+            <CategorySelect
+              value={ticket.category}
+              onChange={(c) => categoryMutation.mutate(c)}
+              disabled={categoryMutation.isPending}
+            />
           </div>
         </div>
 
@@ -117,6 +135,57 @@ export default function TicketDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+const STATUS_CLASSES: Record<TicketStatus, string> = {
+  [TicketStatus.open]: "bg-primary/10 border-primary/20 text-primary",
+  [TicketStatus.resolved]: "bg-muted border-border text-muted-foreground",
+  [TicketStatus.closed]: "bg-muted border-border text-muted-foreground opacity-60",
+};
+
+function StatusSelect({ value, onChange, disabled }: {
+  value: TicketStatus;
+  onChange: (v: TicketStatus) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as TicketStatus)}
+      disabled={disabled}
+      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${STATUS_CLASSES[value]}`}
+    >
+      <option value={TicketStatus.open}>Open</option>
+      <option value={TicketStatus.resolved}>Resolved</option>
+      <option value={TicketStatus.closed}>Closed</option>
+    </select>
+  );
+}
+
+const CATEGORY_LABELS: Record<TicketCategory, string> = {
+  [TicketCategory.general_question]: "General",
+  [TicketCategory.technical_question]: "Technical",
+  [TicketCategory.refund_request]: "Refund",
+};
+
+function CategorySelect({ value, onChange, disabled }: {
+  value: TicketCategory | null;
+  onChange: (v: TicketCategory | null) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(e) => onChange((e.target.value as TicketCategory) || null)}
+      disabled={disabled}
+      className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <option value="">No category</option>
+      {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
+        <option key={val} value={val}>{label}</option>
+      ))}
+    </select>
   );
 }
 

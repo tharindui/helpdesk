@@ -34,6 +34,6 @@ export const ticketsApi = {
       .then((r) => r.data),
   get: (id: number) =>
     api.get<TicketDetail>(`/api/tickets/${id}`).then((r) => r.data),
-  assign: (id: number, assignedToId: string | null) =>
-    api.patch<TicketDetail>(`/api/tickets/${id}`, { assignedToId }).then((r) => r.data),
+  update: (id: number, data: { assignedToId?: string | null; status?: TicketStatus; category?: TicketCategory | null }) =>
+    api.patch<TicketDetail>(`/api/tickets/${id}`, data).then((r) => r.data),
 };
