@@ -11,6 +11,8 @@ export type Ticket = {
   createdAt: string;
 };
 
+export type TicketDetail = Ticket & { body: string };
+
 export type TicketPageResult = {
   data: Ticket[];
   total: number;
@@ -27,4 +29,6 @@ export const ticketsApi = {
     api
       .get<TicketPageResult>("/api/tickets", { params: { ...sort, ...filters, ...pagination } })
       .then((r) => r.data),
+  get: (id: number) =>
+    api.get<TicketDetail>(`/api/tickets/${id}`).then((r) => r.data),
 };

@@ -70,6 +70,26 @@ router.get("/", requireAuth, async (req, res) => {
   res.json({ data, total, page, pageSize });
 });
 
+router.get("/:id", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    select: { ...ticketSelect, body: true },
+  });
+
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  res.json(ticket);
+});
+
 const inboundEmailSchema = z.object({
   from: z.string().email("Invalid sender email"),
   fromName: z.string().trim().min(1, "Sender name is required"),

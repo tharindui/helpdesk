@@ -7,8 +7,9 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { TicketStatus, TicketCategory } from "@helpdesk/core";
+import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge, CategoryBadge } from "@/components/TicketBadges";
 import { type Ticket } from "./ticketsApi";
 
 // ---------------------------------------------------------------------------
@@ -55,9 +56,12 @@ const columns = [
     header: "Subject",
     enableSorting: true,
     cell: (info) => (
-      <span className="font-medium text-foreground max-w-xs truncate block">
+      <Link
+        to={`/tickets/${info.row.original.id}`}
+        className="font-medium text-foreground max-w-xs truncate block hover:text-primary hover:underline transition-colors"
+      >
         {info.getValue()}
-      </span>
+      </Link>
     ),
   }),
   columnHelper.accessor("fromName", {
@@ -175,42 +179,3 @@ export function TicketTable({ tickets, sorting, onSortingChange }: Props) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Badges
-// ---------------------------------------------------------------------------
-
-function StatusBadge({ status }: { status: TicketStatus }) {
-  if (status === TicketStatus.open) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-xs font-medium text-primary">
-        Open
-      </span>
-    );
-  }
-  if (status === TicketStatus.resolved) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-        Resolved
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground opacity-60">
-      Closed
-    </span>
-  );
-}
-
-const CATEGORY_LABELS: Record<TicketCategory, string> = {
-  [TicketCategory.general_question]: "General",
-  [TicketCategory.technical_question]: "Technical",
-  [TicketCategory.refund_request]: "Refund",
-};
-
-function CategoryBadge({ category }: { category: TicketCategory }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-      {CATEGORY_LABELS[category]}
-    </span>
-  );
-}

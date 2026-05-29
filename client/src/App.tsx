@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import TicketsPage from "./pages/TicketsPage";
 import UsersPage from "./pages/UsersPage";
 import AppLayout from "./components/AppLayout";
+import TicketDetailPage from "./pages/TicketDetailPage";
 
 function ProtectedRoute() {
   const { data: session, isPending } = authClient.useSession();
@@ -46,6 +47,7 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/tickets" element={<TicketsPage />} />
+            <Route path="/tickets/:id" element={<TicketDetailPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/users" element={<UsersPage />} />
             </Route>
