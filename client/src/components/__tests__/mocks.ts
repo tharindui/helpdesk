@@ -1,4 +1,4 @@
-import type { Assignee } from "@/pages/usersApi";
+import type { Assignee } from "@/pages/users/usersApi";
 
 export type { Assignee };
 

@@ -77,15 +77,53 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - **Auth:** Better Auth client in `src/lib/auth-client.ts` — uses `inferAdditionalFields<typeof auth>()` plugin to pull `role` typing from the server's `auth` instance. Use `authClient.useSession()` for session state (`session.user.name`, `.email`, `.role`), `authClient.signIn.email()` to log in, `authClient.signOut()` to log out.
 - **HTTP client:** Axios. Use the shared instance at `src/lib/axios.ts` (pre-configured with `withCredentials: true`). Never use `fetch` directly.
 - **Server state:** TanStack Query (`@tanstack/react-query`). `QueryClientProvider` is mounted in `App.tsx`. Use `useQuery` for data fetching and `useMutation` for create/update/delete. Update the cache via `queryClient.setQueryData` on mutation success — avoid unnecessary refetches.
-- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only — full CRUD: list, add, edit, delete users), `TicketsPage` (paginated ticket list with sort/filter/search), `TicketDetailPage` (ticket detail, status/category/assignee editing, reply thread). `ReplyForm` lives in its own module `src/pages/ReplyForm.tsx`.
+- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only — full CRUD: list, add, edit, delete users), `TicketsPage` (paginated ticket list with sort/filter/search), `TicketDetailPage` (ticket detail, status/category/assignee editing, reply thread).
 - **Shared layout:** `src/components/AppLayout.tsx` — renders `NavBar`, `<main>` with `max-w-5xl` container via `<Outlet />`, and a `<footer>`. All authenticated pages nest under this; pages render only their own content, not a full-page wrapper.
 - **Custom shared components** live in `src/components/` (not `ui/` — that is shadcn only). Current custom components: `AlertMessage`, `AssigneeCombobox`, `TicketBadges`.
+
+### Page Folder Structure
+
+Pages are organised into **feature subfolders** under `src/pages/`. Each feature folder owns all its components, hooks, API module, and tests:
+
+```
+src/pages/
+  tickets/
+    __tests__/          ← ticket-scoped mocks, renders, and test files
+    CategorySelect.tsx
+    ReplyForm.tsx
+    ReplyThread.tsx
+    StatusSelect.tsx
+    TicketCard.tsx
+    TicketDetailPage.tsx
+    TicketDetailSkeleton.tsx
+    TicketTable.tsx
+    TicketsPage.tsx
+    ticketsApi.ts
+    useTickets.ts
+  users/
+    __tests__/          ← user-scoped mocks, renders, and test files
+    UserDialog.tsx
+    UsersPage.tsx
+    usersApi.ts
+    useUsers.ts
+  HomePage.tsx          ← no related files, stays at root
+  LoginPage.tsx         ← no related files, stays at root
+```
+
+**Single-responsibility page rule:** pages with significant UI are split into focused modules:
+- `<FeaturePage>.tsx` — data layer only: runs all `useQuery`/`useMutation` hooks, handles loading/error states, passes data down.
+- `<FeatureCard>.tsx` — main content card: receives data and handlers as props, renders the full UI.
+- `<FeatureSkeleton>.tsx` — skeleton placeholder shown while data loads.
+- Sub-components (e.g. `ReplyForm.tsx`, `ReplyThread.tsx`, `StatusSelect.tsx`) — single-purpose, receive only what they need via props.
+
+**Cross-feature imports** are fine (e.g. `tickets/TicketCard.tsx` imports `Assignee` type from `../users/usersApi`) — avoid copying types across features.
 
 ### UI Conventions
 
 - Always use **shadcn CSS tokens** (`bg-background`, `text-muted-foreground`, `border-border`, `text-destructive`, etc.) — never raw Tailwind color classes like `bg-gray-50` or `text-blue-600`.
 - Use `aria-invalid={!!error}` on `Input` components to trigger error styling — do not use conditional classNames.
-- Error messages: `text-xs text-destructive` below the field; root-level errors: `bg-destructive/10 border border-destructive/30 text-destructive` alert div.
+- Error messages: `text-xs text-destructive` below the field.
+- Page/form-level alerts: use `<AlertMessage>` from `src/components/AlertMessage.tsx` — never write inline alert divs. Props: `message: string`, `variant?: "error" | "success" | "warning"` (default `"error"`), optional `className` for spacing. Example: `<AlertMessage message="Something went wrong." variant="error" className="mb-4" />`. Inline error colours for reference: error = `bg-destructive/10 border-destructive/30 text-destructive`, success = `bg-green-50 border-green-200 text-green-800`, warning = `bg-amber-50 border-amber-200 text-amber-800` — but always go through the component, never repeat these inline.
 - Loading states: `<p className="text-sm text-muted-foreground">` on a `bg-background` full-screen div.
 - NavBar pattern: sticky header with `backdrop-blur`, user avatar (initials), `Button variant="ghost"` with lucide icon. Use `NavLink` for nav links — active state `text-foreground font-medium`, inactive `text-muted-foreground hover:text-foreground`. Condition admin-only links on `session?.user.role === Role.admin`.
 
@@ -127,10 +165,11 @@ Component tests are the **primary testing layer**. Default to writing component 
 
 - **Stack:** Vitest 4, React Testing Library, `@testing-library/user-event`, `happy-dom` (not jsdom — Windows EPERM issues with jsdom on Bun).
 - **Run:** `bun run --filter client test` (once) or `bun run --filter client test:watch` (watch mode). Do **not** run `vitest` directly or `bun test` — `bun test` invokes Bun's built-in runner instead of Vitest.
-- **File structure:** test files live in a `__tests__/` subdirectory next to the source file, split into three modules:
-  - `mocks.ts` — types, factory functions (`makeUser`, `makeAxiosError`), pure data only
-  - `renders.tsx` — component render helpers wrapping with required providers (`QueryClientProvider`, etc.)
+- **File structure:** test files live in a `__tests__/` subdirectory **inside each feature folder** (e.g. `pages/tickets/__tests__/`, `pages/users/__tests__/`). Each `__tests__/` folder is self-contained — never share `mocks.ts` or `renders.tsx` across feature folders. Three modules per feature:
+  - `mocks.ts` — types and factory functions scoped to that feature (e.g. `makeTicket`, `makeUser`), pure data only. Import from the sibling API module (`../ticketsApi`, `../usersApi`).
+  - `renders.tsx` — render helpers for that feature's components, wrapping with required providers (`QueryClientProvider`, `MemoryRouter`, etc.)
   - `<ComponentName>.test.tsx` — `vi.mock` declarations (must stay here — Vitest hoists them) + all `describe`/`it` blocks
+- **`shadcn/ui` heading caveat:** `CardTitle` renders as a `<div>`, not a heading element — `getByRole("heading")` will not find it. Use `getByText` or assert on URL/button instead.
 - **Mocking axios:** mock `@/lib/axios` with a `vi.fn()` object; use `vi.mocked(api.get).mockResolvedValue(...)` — never use `as ReturnType<typeof vi.fn>` casts (causes IDE type errors).
 - **QueryClient in tests:** create a fresh `QueryClient` per test with `retry: false` (so errors surface immediately without retry delays).
 - **`@testing-library/dom`** must be installed explicitly as a dev dependency — Bun does not auto-install peer dependencies, and `@testing-library/react` re-exports `screen`, `waitFor`, `within` from it.

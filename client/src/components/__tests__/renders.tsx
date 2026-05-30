@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { AssigneeCombobox } from "../AssigneeCombobox";
-import type { Assignee } from "@/pages/usersApi";
+import type { Assignee } from "@/pages/users/usersApi";
 
 type Props = {
   assignees?: Assignee[];

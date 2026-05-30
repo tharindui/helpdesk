@@ -1,19 +1,7 @@
 import { TicketStatus, TicketCategory, SenderType } from "@helpdesk/core";
-import type { User } from "../usersApi";
 import type { Ticket, TicketDetail, TicketPageResult, Reply } from "../ticketsApi";
 
-export type { User, Ticket, TicketDetail, TicketPageResult, Reply };
-
-export function makeUser(overrides: Partial<User> = {}): User {
-  return {
-    id: "user-1",
-    name: "Alice Smith",
-    email: "alice@example.com",
-    role: "agent",
-    createdAt: "2024-01-15T10:00:00.000Z",
-    ...overrides,
-  };
-}
+export type { Ticket, TicketDetail, TicketPageResult, Reply };
 
 export function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
   return {
@@ -51,13 +39,6 @@ export function makeReply(overrides: Partial<Reply> = {}): Reply {
     createdAt: "2024-03-10T10:00:00.000Z",
     author: { id: "user-1", name: "Alice Smith" },
     ...overrides,
-  };
-}
-
-export function makeAxiosError(message: string) {
-  return {
-    isAxiosError: true,
-    response: { data: { error: message } },
   };
 }
 

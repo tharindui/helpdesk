@@ -9,7 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { type Assignee } from "@/pages/usersApi";
+import { type Assignee } from "@/pages/users/usersApi";
 
 type Props = {
   assignees: Assignee[];

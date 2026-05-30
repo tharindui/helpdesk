@@ -4,10 +4,10 @@ import { Role } from "@helpdesk/core";
 import { authClient } from "./lib/auth-client";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
-import TicketsPage from "./pages/TicketsPage";
-import UsersPage from "./pages/UsersPage";
+import TicketsPage from "./pages/tickets/TicketsPage";
+import UsersPage from "./pages/users/UsersPage";
 import AppLayout from "./components/AppLayout";
-import TicketDetailPage from "./pages/TicketDetailPage";
+import TicketDetailPage from "./pages/tickets/TicketDetailPage";
 
 function ProtectedRoute() {
   const { data: session, isPending } = authClient.useSession();
