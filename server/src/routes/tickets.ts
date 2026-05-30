@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { TicketStatus, TicketCategory } from "@helpdesk/core";
+import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "@helpdesk/core";
 import { validateBody } from "../middleware/validateBody";
 import { requireAuth } from "../middleware/requireAuth";
 import prisma from "../db";
@@ -136,6 +136,68 @@ router.patch("/:id", requireAuth, async (req, res) => {
   });
 
   res.json(ticket);
+});
+
+const replySelect = {
+  id: true,
+  body: true,
+  senderType: true,
+  createdAt: true,
+  author: { select: { id: true, name: true } },
+} as const;
+
+router.get("/:id/replies", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const replies = await prisma.reply.findMany({
+    where: { ticketId: id },
+    orderBy: { createdAt: "asc" },
+    select: replySelect,
+  });
+
+  res.json(replies);
+});
+
+router.post("/:id/replies", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const result = createReplySchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ errors: result.error.flatten().fieldErrors });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const reply = await prisma.reply.create({
+    data: {
+      ticketId: id,
+      authorId: req.user!.id,
+      senderType: SenderType.agent,
+      body: result.data.body,
+    },
+    select: replySelect,
+  });
+
+  res.status(201).json(reply);
 });
 
 const inboundEmailSchema = z.object({

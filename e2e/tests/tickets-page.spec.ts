@@ -46,9 +46,8 @@ test.describe("Tickets page — access control", () => {
     await page.goto("/tickets");
     await page.waitForURL("/login");
 
-    await expect(
-      page.getByRole("heading", { name: "Sign In" })
-    ).toBeVisible();
+    await expect(page).toHaveURL("/login");
+    await expect(page.getByRole("button", { name: "Sign In" })).toBeVisible();
   });
 
   test("agent can access the Tickets page", async ({ page }) => {

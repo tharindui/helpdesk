@@ -8,6 +8,7 @@ import {
   type CreateUserData,
   type EditUserData,
 } from "@helpdesk/core";
+import { AlertMessage } from "@/components/AlertMessage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,7 +89,7 @@ function AddForm({
       </DialogHeader>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
-        {error && <ErrorAlert message={error} />}
+        {error && <AlertMessage message={error} />}
 
         <Field label="Name" htmlFor="add-name" error={errors.name?.message}>
           <Input id="add-name" {...register("name")} aria-invalid={!!errors.name} />
@@ -147,7 +148,7 @@ function EditForm({
       </DialogHeader>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
-        {error && <ErrorAlert message={error} />}
+        {error && <AlertMessage message={error} />}
 
         <Field label="Name" htmlFor="edit-name" error={errors.name?.message}>
           <Input id="edit-name" {...register("name")} aria-invalid={!!errors.name} />
@@ -194,7 +195,7 @@ function DeleteConfirm({
       </DialogHeader>
 
       <div className="py-2 space-y-4">
-        {error && <ErrorAlert message={error} />}
+        {error && <AlertMessage message={error} />}
         <p className="text-sm text-muted-foreground">
           Are you sure you want to delete{" "}
           <span className="font-medium text-foreground">{user.name}</span>? This
@@ -214,13 +215,6 @@ function DeleteConfirm({
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
-function ErrorAlert({ message }: { message: string }) {
-  return (
-    <div role="alert" className="rounded-md bg-destructive/10 border border-destructive/30 text-destructive px-3 py-2 text-sm">
-      {message}
-    </div>
-  );
-}
 
 function Field({
   label,

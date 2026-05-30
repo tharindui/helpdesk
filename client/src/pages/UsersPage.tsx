@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AlertMessage } from "@/components/AlertMessage";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { extractError, type User } from "./usersApi";
@@ -68,9 +69,7 @@ export default function UsersPage() {
       </div>
 
       {isError && (
-        <div className="mb-6 rounded-md bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 text-sm">
-          Something went wrong. Please try again.
-        </div>
+        <AlertMessage message="Something went wrong. Please try again." className="mb-6" />
       )}
 
       {!isError && users.length === 0 ? (

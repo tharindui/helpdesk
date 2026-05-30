@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { AlertMessage } from "@/components/AlertMessage";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,12 +70,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           {errors.root && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {errors.root.message}
-            </div>
+            <AlertMessage message={errors.root.message!} className="mb-4" />
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

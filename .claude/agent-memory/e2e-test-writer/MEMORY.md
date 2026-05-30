@@ -8,3 +8,4 @@
 - [Component Test Setup](component-test-setup.md) — Vitest + RTL installation, vite.config.ts test block, axios mock pattern, QueryClient wrapper
 - [Users Page Patterns](users-page-patterns.md) — Role badge selector, Better Auth soft-delete email collision, count subtitle assertions, fixture setup pattern
 - [Tickets Page Patterns](tickets-page-patterns.md) — Webhook helper in UI tests, reload pattern, row locator, ordering assertion, category em-dash, count subtitle
+- [Ticket Detail Patterns](ticket-detail-patterns.md) — Navigation via subject link, reply submission flow, empty-state text, h1 heading assertion

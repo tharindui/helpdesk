@@ -16,3 +16,8 @@ export enum TicketCategory {
   technical_question = "technical_question",
   refund_request = "refund_request",
 }
+
+export enum SenderType {
+  agent = "agent",
+  customer = "customer",
+}

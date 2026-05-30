@@ -77,8 +77,9 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - **Auth:** Better Auth client in `src/lib/auth-client.ts` — uses `inferAdditionalFields<typeof auth>()` plugin to pull `role` typing from the server's `auth` instance. Use `authClient.useSession()` for session state (`session.user.name`, `.email`, `.role`), `authClient.signIn.email()` to log in, `authClient.signOut()` to log out.
 - **HTTP client:** Axios. Use the shared instance at `src/lib/axios.ts` (pre-configured with `withCredentials: true`). Never use `fetch` directly.
 - **Server state:** TanStack Query (`@tanstack/react-query`). `QueryClientProvider` is mounted in `App.tsx`. Use `useQuery` for data fetching and `useMutation` for create/update/delete. Update the cache via `queryClient.setQueryData` on mutation success — avoid unnecessary refetches.
-- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only — full CRUD: list, add, edit, delete users).
+- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only — full CRUD: list, add, edit, delete users), `TicketsPage` (paginated ticket list with sort/filter/search), `TicketDetailPage` (ticket detail, status/category/assignee editing, reply thread). `ReplyForm` lives in its own module `src/pages/ReplyForm.tsx`.
 - **Shared layout:** `src/components/AppLayout.tsx` — renders `NavBar`, `<main>` with `max-w-5xl` container via `<Outlet />`, and a `<footer>`. All authenticated pages nest under this; pages render only their own content, not a full-page wrapper.
+- **Custom shared components** live in `src/components/` (not `ui/` — that is shadcn only). Current custom components: `AlertMessage`, `AssigneeCombobox`, `TicketBadges`.
 
 ### UI Conventions
 

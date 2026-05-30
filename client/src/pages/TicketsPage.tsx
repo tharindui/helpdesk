@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AlertMessage } from "@/components/AlertMessage";
 import { type SortingState } from "@tanstack/react-table";
 import { TicketStatus, TicketCategory } from "@helpdesk/core";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
@@ -109,9 +110,7 @@ export default function TicketsPage() {
       </div>
 
       {isError && (
-        <div className="mb-6 rounded-md bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 text-sm">
-          Something went wrong. Please try again.
-        </div>
+        <AlertMessage message="Something went wrong. Please try again." className="mb-6" />
       )}
 
       {isPending ? (

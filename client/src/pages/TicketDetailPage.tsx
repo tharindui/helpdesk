@@ -1,11 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { TicketStatus, TicketCategory } from "@helpdesk/core";
-import { ticketsApi } from "./ticketsApi";
+import { TicketStatus, TicketCategory, SenderType } from "@helpdesk/core";
+import { ticketsApi, type Reply } from "./ticketsApi";
 import { usersApi } from "./usersApi";
 import { AssigneeCombobox } from "@/components/AssigneeCombobox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AlertMessage } from "@/components/AlertMessage";
+import { ReplyForm } from "./ReplyForm";
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +26,12 @@ export default function TicketDetailPage() {
     queryFn: usersApi.listAssignable,
   });
 
+  const { data: replies = [] } = useQuery({
+    queryKey: ["replies", ticketId],
+    queryFn: () => ticketsApi.listReplies(ticketId),
+    enabled: !isNaN(ticketId),
+  });
+
   const assignMutation = useMutation({
     mutationFn: (assignedToId: string | null) => ticketsApi.update(ticketId, { assignedToId }),
     onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
@@ -37,6 +45,12 @@ export default function TicketDetailPage() {
   const categoryMutation = useMutation({
     mutationFn: (category: TicketCategory | null) => ticketsApi.update(ticketId, { category }),
     onSuccess: (updated) => queryClient.setQueryData(["ticket", ticketId], updated),
+  });
+
+  const replyMutation = useMutation({
+    mutationFn: (body: string) => ticketsApi.createReply(ticketId, body),
+    onSuccess: (reply) =>
+      queryClient.setQueryData<Reply[]>(["replies", ticketId], (prev = []) => [...prev, reply]),
   });
 
   if (isPending) {
@@ -74,9 +88,7 @@ export default function TicketDetailPage() {
           <ArrowLeft className="w-4 h-4" />
           Back to tickets
         </Link>
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Ticket not found or could not be loaded.
-        </div>
+        <AlertMessage message="Ticket not found or could not be loaded." />
       </div>
     );
   }
@@ -130,13 +142,51 @@ export default function TicketDetailPage() {
           />
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 border-b border-border">
           <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.body}</p>
         </div>
+
+        <div className="px-6 py-5 space-y-4">
+          <h2 className="text-sm font-medium text-foreground">
+            {replies.length === 0 ? "No replies yet" : `Replies (${replies.length})`}
+          </h2>
+          {replies.map((reply) => {
+            const isAgent = reply.senderType === SenderType.agent;
+            return (
+              <div key={reply.id} className={`flex ${isAgent ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[75%] rounded-lg border px-4 py-3 space-y-1 ${isAgent ? "bg-primary/10 border-primary/20" : "bg-muted border-border"}`}>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {isAgent ? reply.author?.name : "Customer"}
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {new Date(reply.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{reply.body}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      <ReplyForm
+        onSubmit={(body) => replyMutation.mutate(body)}
+        isPending={replyMutation.isPending}
+        isError={replyMutation.isError}
+      />
     </div>
   );
 }
+
 
 const STATUS_CLASSES: Record<TicketStatus, string> = {
   [TicketStatus.open]: "bg-primary/10 border-primary/20 text-primary",
@@ -188,4 +238,3 @@ function CategorySelect({ value, onChange, disabled }: {
     </select>
   );
 }
-
