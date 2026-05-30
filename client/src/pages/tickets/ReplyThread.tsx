@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { SenderType } from "@helpdesk/core";
 import { type Reply } from "./ticketsApi";
 
@@ -29,7 +30,14 @@ export function ReplyThread({ replies }: Props) {
                   })}
                 </span>
               </div>
-              <p className="text-sm text-foreground whitespace-pre-wrap">{reply.body}</p>
+              {reply.bodyHTML ? (
+                <div
+                  className="text-sm text-foreground"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(reply.bodyHTML) }}
+                />
+              ) : (
+                <p className="text-sm text-foreground whitespace-pre-wrap">{reply.body}</p>
+              )}
             </div>
           </div>
         );

@@ -26,6 +26,7 @@ export function makeTicketDetail(overrides: Partial<TicketDetail> = {}): TicketD
     category: null,
     createdAt: "2024-03-10T09:00:00.000Z",
     body: "I need help with my order.",
+    bodyHTML: null,
     assignedTo: null,
     ...overrides,
   };
@@ -35,6 +36,7 @@ export function makeReply(overrides: Partial<Reply> = {}): Reply {
   return {
     id: 1,
     body: "We are looking into it.",
+    bodyHTML: null,
     senderType: SenderType.agent,
     createdAt: "2024-03-10T10:00:00.000Z",
     author: { id: "user-1", name: "Alice Smith" },

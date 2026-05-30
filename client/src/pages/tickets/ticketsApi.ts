@@ -13,6 +13,7 @@ export type Ticket = {
 
 export type TicketDetail = Ticket & {
   body: string;
+  bodyHTML: string | null;
   assignedTo: { id: string; name: string } | null;
 };
 
@@ -26,6 +27,7 @@ export type TicketPageResult = {
 export type Reply = {
   id: number;
   body: string;
+  bodyHTML: string | null;
   senderType: SenderType;
   createdAt: string;
   author: { id: string; name: string } | null;

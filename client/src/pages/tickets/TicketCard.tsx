@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { type TicketStatus, type TicketCategory } from "@helpdesk/core";
 import { type TicketDetail, type Reply } from "./ticketsApi";
 import { type Assignee } from "../users/usersApi";
@@ -75,7 +76,14 @@ export function TicketCard({
       </div>
 
       <div className="px-6 py-5 border-b border-border">
-        <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.body}</p>
+        {ticket.bodyHTML ? (
+          <div
+            className="text-sm text-foreground"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(ticket.bodyHTML) }}
+          />
+        ) : (
+          <p className="text-sm text-foreground whitespace-pre-wrap">{ticket.body}</p>
+        )}
       </div>
 
       <ReplyThread replies={replies} />

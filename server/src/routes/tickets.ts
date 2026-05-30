@@ -79,7 +79,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
   const ticket = await prisma.ticket.findUnique({
     where: { id },
-    select: { ...ticketSelect, body: true, assignedTo: { select: { id: true, name: true } } },
+    select: { ...ticketSelect, body: true, bodyHTML: true, assignedTo: { select: { id: true, name: true } } },
   });
 
   if (!ticket) {
@@ -132,7 +132,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
       ...(status !== undefined && { status }),
       ...(category !== undefined && { category }),
     },
-    select: { ...ticketSelect, body: true, assignedTo: { select: { id: true, name: true } } },
+    select: { ...ticketSelect, body: true, bodyHTML: true, assignedTo: { select: { id: true, name: true } } },
   });
 
   res.json(ticket);
@@ -141,6 +141,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
 const replySelect = {
   id: true,
   body: true,
+  bodyHTML: true,
   senderType: true,
   createdAt: true,
   author: { select: { id: true, name: true } },
@@ -201,10 +202,11 @@ router.post("/:id/replies", requireAuth, async (req, res) => {
 });
 
 const inboundEmailSchema = z.object({
-  from: z.string().email("Invalid sender email"),
-  fromName: z.string().trim().min(1, "Sender name is required"),
-  subject: z.string().trim().min(1, "Subject is required"),
-  body: z.string().trim().min(1, "Body is required"),
+  from: z.string().email("Invalid sender email").max(254, "Email too long"),
+  fromName: z.string().trim().min(1, "Sender name is required").max(100, "Sender name too long"),
+  subject: z.string().trim().min(1, "Subject is required").max(255, "Subject too long"),
+  body: z.string().trim().min(1, "Body is required").max(100_000, "Body too long"),
+  bodyHTML: z.string().max(100_000, "Body HTML too long").optional(),
 });
 
 // POST /api/tickets/inbound — public webhook, secured by X-Webhook-Secret header
@@ -214,7 +216,7 @@ router.post("/inbound", async (req, res) => {
     return;
   }
 
-  const { from, fromName, subject, body } = validateBody(inboundEmailSchema, req.body);
+  const { from, fromName, subject, body, bodyHTML } = validateBody(inboundEmailSchema, req.body);
 
   const existing = await prisma.ticket.findFirst({
     where: { fromEmail: from, subject, body },
@@ -223,7 +225,7 @@ router.post("/inbound", async (req, res) => {
   if (existing) return void res.status(409).json({ error: "Ticket already exists", ticket: existing });
 
   const ticket = await prisma.ticket.create({
-    data: { fromEmail: from, fromName, subject, body },
+    data: { fromEmail: from, fromName, subject, body, ...(bodyHTML && { bodyHTML }) },
     select: ticketSelect,
   });
 
