@@ -13,6 +13,8 @@ enum Role {
 }
 
 enum TicketStatus {
+  new
+  processing
   open
   resolved
   closed
@@ -27,6 +29,7 @@ enum TicketCategory {
 enum SenderType {
   agent
   customer
+  ai
 }
 
 model User {

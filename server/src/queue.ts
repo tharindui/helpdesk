@@ -18,6 +18,11 @@ export async function stopQueue(): Promise<void> {
   console.log("[Queue] stopped");
 }
 
-export async function sendClassifyJob(ticket: Pick<Ticket, "id" | "subject" | "body">): Promise<void> {
-  await boss.send(CLASSIFY_QUEUE, { ticketId: ticket.id, subject: ticket.subject, body: ticket.body });
+export async function sendClassifyJob(ticket: Pick<Ticket, "id" | "subject" | "body" | "fromName">): Promise<void> {
+  await boss.send(CLASSIFY_QUEUE, {
+    ticketId: ticket.id,
+    subject: ticket.subject,
+    body: ticket.body,
+    fromName: ticket.fromName,
+  });
 }

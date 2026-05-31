@@ -12,12 +12,14 @@ export function ReplyThread({ replies }: Props) {
       </h2>
       {replies.map((reply) => {
         const isAgent = reply.senderType === SenderType.agent;
+        const isAI = reply.senderType === SenderType.ai;
+        const senderLabel = isAgent ? reply.author?.name : isAI ? "AI Support" : "Customer";
         return (
-          <div key={reply.id} className={`flex ${isAgent ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[75%] rounded-lg border px-4 py-3 space-y-1 ${isAgent ? "bg-primary/10 border-primary/20" : "bg-muted border-border"}`}>
+          <div key={reply.id} className={`flex ${isAgent || isAI ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[75%] rounded-lg border px-4 py-3 space-y-1 ${isAgent || isAI ? "bg-primary/10 border-primary/20" : "bg-muted border-border"}`}>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
-                  {isAgent ? reply.author?.name : "Customer"}
+                  {senderLabel}
                 </span>
                 <span>·</span>
                 <span>

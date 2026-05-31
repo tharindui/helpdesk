@@ -46,8 +46,13 @@ router.get("/", requireAuth, async (req, res) => {
     ? result.data
     : { sortBy: "createdAt" as const, sortDir: "desc" as const, status: undefined, category: undefined, search: undefined, page: 1, pageSize: 10 };
 
+  const statusFilter =
+    status !== undefined
+      ? { status }
+      : { status: { notIn: [TicketStatus.new, TicketStatus.processing] as TicketStatus[] } };
+
   const where = {
-    ...(status !== undefined && { status }),
+    ...statusFilter,
     ...(category !== undefined && { category }),
     ...(search && {
       OR: [
@@ -279,7 +284,7 @@ router.post("/inbound", async (req, res) => {
   if (existing) return void res.status(409).json({ error: "Ticket already exists", ticket: existing });
 
   const ticket = await prisma.ticket.create({
-    data: { fromEmail: from, fromName, subject, body, ...(bodyHTML && { bodyHTML }) },
+    data: { fromEmail: from, fromName, subject, body, status: TicketStatus.new, ...(bodyHTML && { bodyHTML }) },
     select: { ...ticketSelect, body: true },
   });
 

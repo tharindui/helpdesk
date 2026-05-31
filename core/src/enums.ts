@@ -6,6 +6,8 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role];
 
 export enum TicketStatus {
+  new = "new",
+  processing = "processing",
   open = "open",
   resolved = "resolved",
   closed = "closed",
@@ -20,4 +22,5 @@ export enum TicketCategory {
 export enum SenderType {
   agent = "agent",
   customer = "customer",
+  ai = "ai",
 }

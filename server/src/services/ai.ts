@@ -1,7 +1,45 @@
 import { generateText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import { TicketCategory } from "@helpdesk/core";
+import { readFileSync } from "fs";
+import { join } from "path";
+
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+const knowledgeBase = readFileSync(join(import.meta.dir, "../../knowledge-base.md"), "utf-8");
+
+export async function autoResolveTicket(
+  subject: string,
+  body: string,
+  fromName: string,
+): Promise<{ canResolve: true; reply: string } | { canResolve: false }> {
+  const firstName = fromName.trim().split(" ")[0];
+  const { text } = await generateText({
+    model: groq("llama-3.3-70b-versatile"),
+    system: `You are a warm, professional customer support assistant. Using ONLY the knowledge base below, decide if you can fully resolve the customer's question.
+Follow the escalation rules in the knowledge base — if any apply, you cannot resolve.
+
+If you can resolve, write a reply that:
+- Starts with exactly "Hi ${firstName},"
+- Is friendly, warm, and professional in tone
+- Gets straight to the helpful answer — no restating their issue
+- Uses clear formatting: short paragraphs, numbered steps where applicable
+- Ends with "Best regards,\\nSupport Team"
+
+Respond with ONLY a raw JSON object — no markdown fences:
+- If resolvable: {"canResolve":true,"reply":"..."}
+- If not: {"canResolve":false}
+
+Knowledge Base:
+${knowledgeBase}`,
+    prompt: `Subject: ${subject}\n\nMessage:\n${body}`,
+  });
+
+  const json = JSON.parse(text.trim().replace(/^```json\n?|```$/g, ""));
+  if (json.canResolve === true && typeof json.reply === "string") {
+    return { canResolve: true, reply: json.reply };
+  }
+  return { canResolve: false };
+}
 
 export async function classifyTicket(subject: string, body: string): Promise<TicketCategory | null> {
   const { text } = await generateText({
