@@ -6,6 +6,7 @@ import { AssigneeCombobox } from "@/components/AssigneeCombobox";
 import { StatusSelect } from "./StatusSelect";
 import { CategorySelect } from "./CategorySelect";
 import { ReplyThread } from "./ReplyThread";
+import { TicketSummary } from "./TicketSummary";
 
 type Props = {
   ticket: TicketDetail;
@@ -87,6 +88,7 @@ export function TicketCard({
       </div>
 
       <ReplyThread replies={replies} />
+      <TicketSummary ticketId={ticket.id} />
     </div>
   );
 }

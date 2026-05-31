@@ -3,6 +3,24 @@ import { createGroq } from "@ai-sdk/groq";
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
+export async function summarizeTicket(
+  subject: string,
+  body: string,
+  replies: Array<{ senderType: string; body: string; author: { name: string } | null }>,
+): Promise<string> {
+  const conversation = replies
+    .map((r) => `${r.senderType === "agent" ? (r.author?.name ?? "Agent") : "Customer"}: ${r.body}`)
+    .join("\n\n");
+
+  const { text } = await generateText({
+    model: groq("llama-3.3-70b-versatile"),
+    system:
+      "You are a customer support analyst. Summarize the ticket and conversation history concisely in 2–4 sentences. Cover: what the customer's issue is, what has been done or offered so far, and the current status. Be factual and brief.",
+    prompt: `Subject: ${subject}\n\nCustomer's message:\n${body}${conversation ? `\n\nConversation:\n${conversation}` : ""}`,
+  });
+  return text.trim();
+}
+
 export async function polishReply(
   draft: string,
   agentName: string,
