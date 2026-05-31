@@ -82,6 +82,7 @@ export default function TicketDetailPage() {
             assigneePending={assignMutation.isPending}
           />
           <ReplyForm
+            ticketId={ticketId}
             onSubmit={(body) => replyMutation.mutate(body)}
             isPending={replyMutation.isPending}
             isError={replyMutation.isError}

@@ -50,4 +50,6 @@ export const ticketsApi = {
     api.get<Reply[]>(`/api/tickets/${ticketId}/replies`).then((r) => r.data),
   createReply: (ticketId: number, body: string) =>
     api.post<Reply>(`/api/tickets/${ticketId}/replies`, { body }).then((r) => r.data),
+  polishReply: (ticketId: number, body: string) =>
+    api.post<{ body: string }>(`/api/tickets/${ticketId}/polish-reply`, { body }).then((r) => r.data),
 };

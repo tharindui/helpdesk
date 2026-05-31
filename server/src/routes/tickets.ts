@@ -4,6 +4,7 @@ import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "@he
 import { validateBody } from "../middleware/validateBody";
 import { requireAuth } from "../middleware/requireAuth";
 import prisma from "../db";
+import { polishReply } from "../services/ai";
 
 if (!process.env.WEBHOOK_SECRET) throw new Error("WEBHOOK_SECRET must be set");
 
@@ -199,6 +200,32 @@ router.post("/:id/replies", requireAuth, async (req, res) => {
   });
 
   res.status(201).json(reply);
+});
+
+router.post("/:id/polish-reply", requireAuth, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  const result = z.object({ body: z.string().trim().min(1) }).safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ errors: result.error.flatten().fieldErrors });
+    return;
+  }
+
+  const ticket = await prisma.ticket.findUnique({
+    where: { id },
+    select: { subject: true, body: true },
+  });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const polished = await polishReply(result.data.body, req.user!.name, ticket.subject, ticket.body);
+  res.json({ body: polished });
 });
 
 const inboundEmailSchema = z.object({

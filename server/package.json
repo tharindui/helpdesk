@@ -9,9 +9,13 @@
     "seed:tickets": "bun --env-file=.env prisma/seed-tickets.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.80",
+    "@ai-sdk/groq": "^3.0.39",
+    "@ai-sdk/openai": "^3.0.67",
     "@helpdesk/core": "workspace:*",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "ai": "^6.0.193",
     "better-auth": "^1.6.11",
     "cors": "^2.8.5",
     "express": "^5.1.0",
