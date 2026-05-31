@@ -8,6 +8,7 @@ import { requireAuth } from "./middleware/requireAuth";
 import { errorHandler } from "./middleware/errorHandler";
 import usersRouter from "./routes/users";
 import ticketsRouter from "./routes/tickets";
+import { startQueue, stopQueue } from "./queue";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -44,6 +45,13 @@ app.use("/api/tickets", ticketsRouter);
 
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-});
+async function boot() {
+  await startQueue();
+  app.listen(PORT, () => {
+    console.log(`Server listening on http://localhost:${PORT}`);
+  });
+  process.on("SIGTERM", stopQueue);
+  process.on("SIGINT", stopQueue);
+}
+
+boot();

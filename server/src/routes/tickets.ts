@@ -4,7 +4,8 @@ import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "@he
 import { validateBody } from "../middleware/validateBody";
 import { requireAuth } from "../middleware/requireAuth";
 import prisma from "../db";
-import { polishReply, summarizeTicket, classifyAndUpdateTicket } from "../services/ai";
+import { polishReply, summarizeTicket } from "../services/ai";
+import { sendClassifyJob } from "../queue";
 
 if (!process.env.WEBHOOK_SECRET) throw new Error("WEBHOOK_SECRET must be set");
 
@@ -283,7 +284,7 @@ router.post("/inbound", async (req, res) => {
   });
 
   res.status(201).json(ticket);
-  classifyAndUpdateTicket(ticket);
+  sendClassifyJob(ticket).catch((err) => console.error("[Queue] Failed to enqueue classification:", err));
 });
 
 export default router;

@@ -1,12 +1,9 @@
 import { generateText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import { TicketCategory } from "@helpdesk/core";
-import prisma from "../db";
-import type { Ticket } from "../generated/prisma/client";
-
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
 
-async function classifyTicket(subject: string, body: string): Promise<TicketCategory | null> {
+export async function classifyTicket(subject: string, body: string): Promise<TicketCategory | null> {
   const { text } = await generateText({
     model: groq("llama-3.3-70b-versatile"),
     system:
@@ -18,13 +15,6 @@ async function classifyTicket(subject: string, body: string): Promise<TicketCate
   return valid.includes(raw) ? (raw as TicketCategory) : null;
 }
 
-export function classifyAndUpdateTicket(ticket: Pick<Ticket, "id" | "subject" | "body">): void {
-  classifyTicket(ticket.subject, ticket.body)
-    .then((category) => {
-      if (category) return prisma.ticket.update({ where: { id: ticket.id }, data: { category } });
-    })
-    .catch((err) => console.error(`[AI] Failed to classify ticket ${ticket.id}:`, err));
-}
 
 export async function summarizeTicket(
   subject: string,
