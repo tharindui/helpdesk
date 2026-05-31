@@ -51,5 +51,5 @@ export const ticketsApi = {
   createReply: (ticketId: number, body: string) =>
     api.post<Reply>(`/api/tickets/${ticketId}/replies`, { body }).then((r) => r.data),
   polishReply: (ticketId: number, body: string) =>
-    api.post<{ body: string }>(`/api/tickets/${ticketId}/polish-reply`, { body }).then((r) => r.data),
+    api.post<{ polished: string; aiSuggestion: string }>(`/api/tickets/${ticketId}/polish-reply`, { body }).then((r) => r.data),
 };

@@ -8,26 +8,25 @@ export async function polishReply(
   agentName: string,
   ticketSubject: string,
   ticketBody: string,
-): Promise<string> {
+  clientName: string,
+): Promise<{ polished: string; aiSuggestion: string }> {
   const { text } = await generateText({
     model: groq("llama-3.3-70b-versatile"),
     system: `You are a professional customer support agent named ${agentName}.
 
-The customer's ticket details:
-Subject: ${ticketSubject}
-Description: ${ticketBody}
+Ticket subject: ${ticketSubject}
+Ticket description: ${ticketBody}
 
-Your task: rewrite the agent's draft reply to be clearer, more polite, and professional.
-Rules:
-- Preserve the original intent and key points of the draft — do not add information not in the draft.
-- Keep the response focused and relevant to what the agent wrote.
-- End the reply with this exact sign-off:
+Return ONLY a valid JSON object with exactly two fields:
+- "polished": The agent's draft rewritten to be clearer, more polite, and professional. Preserve the original intent. Start with "Dear ${clientName}," and end with "Best regards,\\n${agentName}".
+- "aiSuggestion": Your own independent solution to the customer's issue based only on the ticket details (do not use the agent's draft). Start with "Dear ${clientName}," and end with "Best regards,\\n${agentName}".
 
-Best regards,
-${agentName}
+Important rule for both options: do NOT restate, summarize, or acknowledge the customer's issue or ticket description. Go straight to the response or solution.
 
-Output ONLY the rewritten reply with the sign-off. No preamble, no bullet points, no explanation.`,
+Output ONLY the raw JSON object. No markdown, no code fences, no explanation.`,
     prompt: draft,
   });
-  return text;
+
+  const json = JSON.parse(text.trim().replace(/^```json\n?|```$/g, ""));
+  return { polished: String(json.polished), aiSuggestion: String(json.aiSuggestion) };
 }

@@ -217,15 +217,15 @@ router.post("/:id/polish-reply", requireAuth, async (req, res) => {
 
   const ticket = await prisma.ticket.findUnique({
     where: { id },
-    select: { subject: true, body: true },
+    select: { subject: true, body: true, fromName: true },
   });
   if (!ticket) {
     res.status(404).json({ error: "Ticket not found" });
     return;
   }
 
-  const polished = await polishReply(result.data.body, req.user!.name, ticket.subject, ticket.body);
-  res.json({ body: polished });
+  const options = await polishReply(result.data.body, req.user!.name, ticket.subject, ticket.body, ticket.fromName);
+  res.json(options);
 });
 
 const inboundEmailSchema = z.object({

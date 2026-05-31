@@ -178,20 +178,13 @@ describe("TicketDetailPage", () => {
   });
 
   describe("reply form", () => {
-    it("shows a validation error when submitting an empty reply", async () => {
+    it("disables the Send reply button when the textarea is empty", async () => {
       setupGetMocks();
-      const user = userEvent.setup();
 
       renderTicketDetailPage();
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Send reply" })).toBeInTheDocument();
-      });
-
-      await user.click(screen.getByRole("button", { name: "Send reply" }));
-
-      await waitFor(() => {
-        expect(screen.getByText("Reply cannot be empty")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Send reply" })).toBeDisabled();
       });
     });
 
