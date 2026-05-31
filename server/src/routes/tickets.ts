@@ -4,7 +4,7 @@ import { TicketStatus, TicketCategory, SenderType, createReplySchema } from "@he
 import { validateBody } from "../middleware/validateBody";
 import { requireAuth } from "../middleware/requireAuth";
 import prisma from "../db";
-import { polishReply, summarizeTicket } from "../services/ai";
+import { polishReply, summarizeTicket, classifyAndUpdateTicket } from "../services/ai";
 
 if (!process.env.WEBHOOK_SECRET) throw new Error("WEBHOOK_SECRET must be set");
 
@@ -279,10 +279,11 @@ router.post("/inbound", async (req, res) => {
 
   const ticket = await prisma.ticket.create({
     data: { fromEmail: from, fromName, subject, body, ...(bodyHTML && { bodyHTML }) },
-    select: ticketSelect,
+    select: { ...ticketSelect, body: true },
   });
 
   res.status(201).json(ticket);
+  classifyAndUpdateTicket(ticket);
 });
 
 export default router;
