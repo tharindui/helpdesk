@@ -1,4 +1,4 @@
-import { useNavigate, NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Role } from "@helpdesk/core";
 import { authClient } from "../lib/auth-client";
@@ -8,9 +8,10 @@ export default function NavBar() {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
 
-  const handleSignOut = async () => {
-    await authClient.signOut();
-    navigate("/login", { replace: true });
+  const handleSignOut = () => {
+    authClient.signOut({
+      fetchOptions: { onSuccess: () => navigate("/login", { replace: true }) },
+    });
   };
 
   const initials = session?.user.name

@@ -1,9 +1,11 @@
 import { TicketStatus } from "@helpdesk/core";
 
 const STATUS_CLASSES: Record<TicketStatus, string> = {
-  [TicketStatus.open]:     "bg-primary/10 border-primary/20 text-primary",
-  [TicketStatus.resolved]: "bg-muted border-border text-muted-foreground",
-  [TicketStatus.closed]:   "bg-muted border-border text-muted-foreground opacity-60",
+  [TicketStatus.new]:        "bg-muted border-border text-muted-foreground",
+  [TicketStatus.processing]: "bg-amber-50 border-amber-200 text-amber-700",
+  [TicketStatus.open]:       "bg-primary/10 border-primary/20 text-primary",
+  [TicketStatus.resolved]:   "bg-muted border-border text-muted-foreground",
+  [TicketStatus.closed]:     "bg-muted border-border text-muted-foreground opacity-60",
 };
 
 type Props = {

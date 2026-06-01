@@ -1,6 +1,14 @@
 import { TicketStatus, TicketCategory } from "@helpdesk/core";
 
 const STATUS_VARIANTS: Record<TicketStatus, { label: string; className: string }> = {
+  [TicketStatus.new]: {
+    label: "New",
+    className: "bg-muted border-border text-muted-foreground",
+  },
+  [TicketStatus.processing]: {
+    label: "Processing",
+    className: "bg-amber-50 border-amber-200 text-amber-700",
+  },
   [TicketStatus.open]: {
     label: "Open",
     className: "bg-primary/10 border-primary/20 text-primary",

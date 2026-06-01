@@ -11,7 +11,7 @@ Use the **context7 MCP server** to fetch up-to-date documentation for any librar
 AI-powered helpdesk ticket management system. Support emails arrive via webhook, are stored as tickets, and AI (Claude API) handles classification, summarisation, and suggested replies. Agents review and send responses; admin manages agents.
 
 **Roles:** Admin (full access, created at seed time) and Agent (ticket management only).  
-**Ticket statuses:** Open → Resolved → Closed.  
+**Ticket statuses:** New → Processing → Resolved (AI auto-resolved, hidden from list) or Open (needs agent) → Resolved → Closed.  
 **Ticket categories:** General Question, Technical Question, Refund Request.
 
 ## Monorepo Structure
@@ -52,11 +52,19 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 
 ### Server (`server/src/`)
 
-- Entry point: `src/index.ts` — creates the Express app, registers middleware (CORS restricted to localhost, JSON body parser), mounts routes, and starts the listener.
+- Entry point: `src/index.ts` — creates the Express app, registers middleware (CORS restricted to localhost, JSON body parser), mounts routes. Startup logic (queue init + server listen + signal handlers) is wrapped in a `boot()` function called at the bottom of the file.
 - CORS is configured with `credentials: true` to support cookie-based sessions.
 - Runtime is **Bun** (not Node CLI); use `bun --watch` in dev and `bun dist/index.js` in production.
-- Planned additions: route files per domain (tickets, users, dashboard), email service module, AI service module wrapping the Anthropic SDK.
 - **Express 5 async error handling:** Express 5 automatically forwards rejected promises from async route handlers to error middleware — do **not** wrap route bodies in `try/catch`. Only use `try/catch` when you need to handle a specific error locally (e.g. to return a different status code for a known failure). The centralized error handler is in `src/middleware/errorHandler.ts` and must be registered last in `index.ts`.
+
+### Background Queue (pg-boss)
+
+- **`server/src/queue.ts`** — pg-boss singleton. Exports `startQueue()`, `stopQueue()`, `sendClassifyJob(ticket)`. `startQueue()` is called inside `boot()` in `index.ts`. `stopQueue()` is registered for `SIGTERM`/`SIGINT`.
+- **`server/src/workers/classifyTicket.ts`** — worker that runs for every new ticket. Sets status to `processing`, then runs `classifyTicket` and `autoResolveTicket` in parallel:
+  - If AI can resolve: creates an `ai`-typed reply + sets ticket to `resolved`.
+  - If AI cannot resolve: sets ticket to `open` so agents can handle it.
+- pg-boss v12: requires `boss.createQueue(name)` before `boss.work()`. Worker handler receives `jobs[]` (array), not a single job.
+- Job tables live in the `pgboss` schema in PostgreSQL (not `public`).
 
 ### Authentication (Server)
 
@@ -198,8 +206,30 @@ This requires the dev servers to be running (`bun dev`). The test database is se
 
 ### AI Integration
 
-- Claude API (Anthropic SDK) called server-side only.
-- Three use cases: ticket category classification (on creation), ticket summary (on creation), suggested reply (on ticket detail load, using a knowledge base).
+- AI calls are server-side only via **Vercel AI SDK** (`ai` package) with the **Groq provider** (`@ai-sdk/groq`, model: `llama-3.3-70b-versatile`). Configured in `server/src/services/ai.ts`.
+- Groq does **not** support `json_schema` response format — use `generateText` with an explicit JSON prompt, then `JSON.parse(text.trim().replace(/^```json\n?|```$/g, ""))` to parse the result.
+- **Four AI functions in `server/src/services/ai.ts`:**
+  - `autoResolveTicket(subject, body, fromName)` — reads `server/knowledge-base.md` (loaded once at module init) and attempts to answer from it. Returns `{ canResolve: true, reply }` or `{ canResolve: false }`. Follows escalation rules in the KB. Addresses customer by first name (`fromName.trim().split(" ")[0]`).
+  - `classifyTicket(subject, body)` — classifies into `general_question`, `technical_question`, or `refund_request`. Returns `TicketCategory | null`.
+  - `summarizeTicket(subject, body, replies)` — summarises ticket + conversation in 2–4 sentences.
+  - `polishReply(draft, agentName, ticketSubject, ticketBody, clientName)` — returns `{ polished, aiSuggestion }` as two alternative reply options.
+- **Knowledge base:** `server/knowledge-base.md` — official support policies used by `autoResolveTicket`. Contains escalation rules (legal threats, refunds outside 30 days, chargebacks, account security) that prevent auto-resolution.
+- **`SenderType.ai`** — used when creating replies from `autoResolveTicket`. Displayed as "AI Support" in the reply thread (right-aligned, same styling as agent replies).
+
+### Ticket Lifecycle
+
+Inbound tickets go through an AI-gated flow before reaching agents:
+
+```
+inbound webhook → status: new
+  → pg-boss job → status: processing
+    → autoResolveTicket answers from KB → status: resolved, reply created (senderType: ai)
+    → autoResolveTicket cannot answer  → status: open (visible to agents)
+```
+
+- Tickets with status `new` or `processing` are **excluded from `GET /api/tickets`** by default (hidden while AI is working). Agents can still filter by those statuses explicitly.
+- `resolved` and `closed` tickets remain visible in the list (filterable by status).
+- The inbound route explicitly sets `status: TicketStatus.new` on creation.
 
 ### Email
 

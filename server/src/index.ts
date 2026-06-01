@@ -8,6 +8,7 @@ import { requireAuth } from "./middleware/requireAuth";
 import { errorHandler } from "./middleware/errorHandler";
 import usersRouter from "./routes/users";
 import ticketsRouter from "./routes/tickets";
+import dashboardRouter from "./routes/dashboard";
 import { startQueue, stopQueue } from "./queue";
 
 const app = express();
@@ -42,6 +43,7 @@ app.get("/api/me", requireAuth, (req, res) => {
 
 app.use("/api/users", usersRouter);
 app.use("/api/tickets", ticketsRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 app.use(errorHandler);
 
