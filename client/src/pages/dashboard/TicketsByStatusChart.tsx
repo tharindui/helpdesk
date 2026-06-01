@@ -1,9 +1,11 @@
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 const COLORS: Record<string, string> = {
-  open: "#3b82f6",
-  resolved: "#22c55e",
-  closed: "#94a3b8",
+  open: "var(--chart-1)",
+  resolved: "var(--chart-3)",
+  closed: "var(--chart-4)",
+  new: "var(--chart-2)",
+  processing: "var(--chart-5)",
 };
 
 type Props = { byStatus: Record<string, number> };

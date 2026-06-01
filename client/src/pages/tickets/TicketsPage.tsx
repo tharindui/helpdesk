@@ -59,7 +59,7 @@ export default function TicketsPage() {
           </div>
         ) : (
           <>
-            <h1 className="text-2xl font-semibold text-foreground">Tickets</h1>
+            <h1 className="font-serif text-2xl font-semibold text-foreground">Tickets</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {total} {total === 1 ? "ticket" : "tickets"}
             </p>

@@ -34,8 +34,8 @@ export function DailyVolumeChart({ dailyVolume }: Props) {
       <AreaChart data={data} margin={{ left: 0, right: 8 }}>
         <defs>
           <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+            <stop offset="5%" style={{ stopColor: "var(--chart-1)", stopOpacity: 0.3 }} />
+            <stop offset="95%" style={{ stopColor: "var(--chart-1)", stopOpacity: 0 }} />
           </linearGradient>
         </defs>
         <XAxis
@@ -52,7 +52,7 @@ export function DailyVolumeChart({ dailyVolume }: Props) {
         <Area
           type="monotone"
           dataKey="count"
-          stroke="#3b82f6"
+          stroke="var(--chart-1)"
           strokeWidth={2}
           fill="url(#volumeGradient)"
           dot={false}

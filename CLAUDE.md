@@ -8,15 +8,15 @@ Use the **context7 MCP server** to fetch up-to-date documentation for any librar
 
 ## Project Overview
 
-AI-powered helpdesk ticket management system. Support emails arrive via webhook, are stored as tickets, and AI (Claude API) handles classification, summarisation, and suggested replies. Agents review and send responses; admin manages agents.
+AI-powered helpdesk ticket management system. Support emails arrive via webhook, are stored as tickets, and AI (Groq via Vercel AI SDK) handles classification, auto-resolution, summarisation, and reply polishing. Agents review and send responses; admin manages agents.
 
 **Roles:** Admin (full access, created at seed time) and Agent (ticket management only).  
-**Ticket statuses:** New → Processing → Resolved (AI auto-resolved, hidden from list) or Open (needs agent) → Resolved → Closed.  
+**Ticket statuses:** New → Processing → Resolved (AI auto-resolved) or Open (needs agent) → Resolved → Closed.  
 **Ticket categories:** General Question, Technical Question, Refund Request.
 
 ## Monorepo Structure
 
-Bun workspaces with three packages: `client/` (React + Vite), `server/` (Node.js + Express + Bun runtime), and `core/` (shared Zod schemas, imported by both as `@helpdesk/core`). The client resolves `@helpdesk/core` via a Vite alias pointing directly at `core/src/index.ts`.
+Bun workspaces with four packages: `client/` (React + Vite), `server/` (Node.js + Express + Bun runtime), `core/` (shared Zod schemas, imported by both as `@helpdesk/core`), and `e2e/` (Playwright tests). The client resolves `@helpdesk/core` via a Vite alias pointing directly at `core/src/index.ts`.
 
 ## Commands
 
@@ -44,6 +44,13 @@ bun run --filter client test
 
 # Client: unit tests (watch mode)
 bun run --filter client test:watch
+
+# E2E tests (requires dev servers running via bun dev)
+bun run --filter e2e test
+
+# Seed the database (from server/)
+bun --env-file=.env prisma/seed.ts           # admin + agent users
+bun --env-file=.env prisma/seed-tickets.ts   # 100 representative tickets
 ```
 
 The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests to `http://localhost:3000`, so the client should call `/api/...` (not the absolute URL).
@@ -56,6 +63,33 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - CORS is configured with `credentials: true` to support cookie-based sessions.
 - Runtime is **Bun** (not Node CLI); use `bun --watch` in dev and `bun dist/index.js` in production.
 - **Express 5 async error handling:** Express 5 automatically forwards rejected promises from async route handlers to error middleware — do **not** wrap route bodies in `try/catch`. Only use `try/catch` when you need to handle a specific error locally (e.g. to return a different status code for a known failure). The centralized error handler is in `src/middleware/errorHandler.ts` and must be registered last in `index.ts`.
+- **`validateBody` middleware** (`src/middleware/validateBody.ts`) — wraps Zod `schema.safeParse(req.body)` and throws a `ValidationError` (caught by `errorHandler` as a 400) on failure. Use it instead of inline safeParse calls in routes.
+
+### API Routes
+
+**Tickets** (`routes/tickets.ts`):
+- `GET /api/tickets` — paginated list; excludes `new`/`processing` by default; supports filter, sort, search
+- `GET /api/tickets/:id` — single ticket
+- `PATCH /api/tickets/:id` — update status, category, or assignedToId
+- `GET /api/tickets/:id/replies` — reply thread
+- `POST /api/tickets/:id/replies` — create agent reply (senderType: agent)
+- `POST /api/tickets/:id/summarize` — AI summary of ticket + conversation
+- `POST /api/tickets/:id/polish-reply` — AI polish: returns `{ polished, aiSuggestion }` for two options
+- `POST /api/tickets/inbound` — webhook; requires `X-Webhook-Secret` header; deduplicates by (fromEmail, subject, body) triple; enqueues classify job
+
+**Users** (`routes/users.ts`):
+- `GET /api/users/assignable` — minimal list (id, name) for ticket assignment dropdowns
+- `GET /api/users` — full list (admin only)
+- `POST /api/users` — create user with role (admin only); uses a separate `adminAuth` instance with signup enabled
+- `PATCH /api/users/:id` — update user fields (admin only)
+- `DELETE /api/users/:id` — soft delete; sets `deletedAt`, clears sessions (admin only)
+
+**Dashboard** (`routes/dashboard.ts`):
+- `GET /api/dashboard` — calls PostgreSQL function `get_dashboard_stats()` returning: total, open, aiResolved, aiResolvedPercent, avgResolutionMs, byStatus (map), byCategory (map), dailyVolume (30-day rolling)
+
+**Other**:
+- `GET /api/health` — health check
+- `GET /api/me` — current user info (requires auth)
 
 ### Background Queue (pg-boss)
 
@@ -81,13 +115,15 @@ The server runs on **port 3000**. The Vite dev server proxies `/api/*` requests 
 - **shadcn/ui** installed (style: `base-nova`, base color: `neutral`). Components live in `src/components/ui/`. Theme CSS variables are in `src/index.css` via `@theme inline`.
 - **Path alias** `@` → `src/` configured in both `tsconfig.json` and `vite.config.ts`.
 - TypeScript strict mode with `noUnusedLocals` and `noUnusedParameters` enforced.
-- **Routing:** React Router v7. Route guards in `App.tsx`: `ProtectedRoute` (any authenticated user), `AdminRoute` (admin role only, nested inside `ProtectedRoute`), `AppLayout` (shared layout — NavBar + footer — wrapping all authenticated pages via `<Outlet />`). Routes: `/login` (public), `/` (protected), `/users` (admin only). Catch-all redirects to `/`.
+- **Routing:** React Router v7. Route guards in `App.tsx`: `ProtectedRoute` (any authenticated user), `AdminRoute` (admin role only, nested inside `ProtectedRoute`), `AppLayout` (shared layout — NavBar + footer — wrapping all authenticated pages via `<Outlet />`). Routes: `/login` (public), `/` (protected), `/users` (admin only), `/tickets` (protected), `/tickets/:id` (protected). Catch-all redirects to `/`.
 - **Auth:** Better Auth client in `src/lib/auth-client.ts` — uses `inferAdditionalFields<typeof auth>()` plugin to pull `role` typing from the server's `auth` instance. Use `authClient.useSession()` for session state (`session.user.name`, `.email`, `.role`), `authClient.signIn.email()` to log in, `authClient.signOut()` to log out.
 - **HTTP client:** Axios. Use the shared instance at `src/lib/axios.ts` (pre-configured with `withCredentials: true`). Never use `fetch` directly.
 - **Server state:** TanStack Query (`@tanstack/react-query`). `QueryClientProvider` is mounted in `App.tsx`. Use `useQuery` for data fetching and `useMutation` for create/update/delete. Update the cache via `queryClient.setQueryData` on mutation success — avoid unnecessary refetches.
-- **Pages built:** `LoginPage` (email/password form), `HomePage` (placeholder dashboard), `UsersPage` (admin only — full CRUD: list, add, edit, delete users), `TicketsPage` (paginated ticket list with sort/filter/search), `TicketDetailPage` (ticket detail, status/category/assignee editing, reply thread).
 - **Shared layout:** `src/components/AppLayout.tsx` — renders `NavBar`, `<main>` with `max-w-5xl` container via `<Outlet />`, and a `<footer>`. All authenticated pages nest under this; pages render only their own content, not a full-page wrapper.
-- **Custom shared components** live in `src/components/` (not `ui/` — that is shadcn only). Current custom components: `AlertMessage`, `AssigneeCombobox`, `TicketBadges`.
+- **Custom shared components** live in `src/components/` (not `ui/` — that is shadcn only). Current custom components: `AlertMessage`, `AssigneeCombobox`, `TicketBadges`, `NavBar`.
+- **HTML rendering:** `Ticket.bodyHTML` and `Reply.bodyHTML` store sanitized HTML from inbound emails. Always sanitize with **DOMPurify** before rendering via `dangerouslySetInnerHTML` — never render raw HTML without it.
+- **Charts:** Dashboard uses **Recharts** (`AreaChart`, `BarChart`, `PieChart`) with shadcn CSS token colors.
+- **Error tracking:** Sentry initialized in `src/lib/sentry.ts`. TanStack Query's `queryCache`/`mutationCache` error handlers forward errors to Sentry automatically.
 
 ### Page Folder Structure
 
@@ -95,6 +131,12 @@ Pages are organised into **feature subfolders** under `src/pages/`. Each feature
 
 ```
 src/pages/
+  dashboard/
+    DailyVolumeChart.tsx
+    DashboardSkeleton.tsx
+    StatsCard.tsx
+    TicketsByCategoryChart.tsx
+    TicketsByStatusChart.tsx
   tickets/
     __tests__/          ← ticket-scoped mocks, renders, and test files
     CategorySelect.tsx
@@ -104,6 +146,7 @@ src/pages/
     TicketCard.tsx
     TicketDetailPage.tsx
     TicketDetailSkeleton.tsx
+    TicketSummary.tsx
     TicketTable.tsx
     TicketsPage.tsx
     ticketsApi.ts
@@ -114,8 +157,8 @@ src/pages/
     UsersPage.tsx
     usersApi.ts
     useUsers.ts
-  HomePage.tsx          ← no related files, stays at root
-  LoginPage.tsx         ← no related files, stays at root
+  HomePage.tsx          ← dashboard: stats cards + 3 charts powered by GET /api/dashboard
+  LoginPage.tsx
 ```
 
 **Single-responsibility page rule:** pages with significant UI are split into focused modules:
@@ -144,14 +187,14 @@ cd client
 NODE_TLS_REJECT_UNAUTHORIZED=0 npx shadcn@latest add <component>
 ```
 
-Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
+Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`, `select`, `popover`, `textarea`, `command`.
 
 ### Validation (Zod)
 
 - Use **Zod** for all data validation at system boundaries: API request bodies (server-side), form inputs (client-side), and external data (webhook payloads, API responses).
 - **Shared schemas and enums live in `core/src/`.** Schemas go in `core/src/schemas/`; shared enums (like `Role`) go in `core/src/enums.ts`. Anything used by both client and server must be defined in `@helpdesk/core` — never duplicate across packages. Server-only or client-only types stay local to that package.
 - **`Role` enum:** Use `Role` from `@helpdesk/core` everywhere — `import { Role } from "@helpdesk/core"`. Never use magic strings `"admin"` or `"agent"` directly; always reference `Role.admin` or `Role.agent`. `Role` is a const-as-enum pattern (`{ admin: "admin", agent: "agent" } as const`) so it works as both a value and a type.
-- Server: parse request bodies with `schema.safeParse(req.body)`; on failure return `400` with `{ errors: result.error.flatten().fieldErrors }`.
+- Server: parse request bodies with `schema.safeParse(req.body)`; on failure return `400` with `{ errors: result.error.flatten().fieldErrors }`. Prefer the `validateBody` middleware over inline parsing.
 - Client: use **React Hook Form** with `zodResolver` from `@hookform/resolvers/zod`. Pass `zodResolver(schema)` to `useForm<z.infer<typeof schema>>`. Use `register`, `handleSubmit`, and `formState.errors` — never manage form state manually with `useState`.
 - Render field errors with `{errors.field && <p className="text-xs text-destructive">{errors.field.message}</p>}` and `aria-invalid={!!errors.field}` on the input.
 - Never use Zod `.parse()` in render paths; use `.safeParse()` so errors don't throw.
@@ -161,11 +204,36 @@ Installed components: `button`, `input`, `label`, `card`, `dialog`, `skeleton`.
 
 ### Database
 
-- PostgreSQL accessed through **Prisma**. Migrations and schema live in `server/prisma/`. Seed script at `server/prisma/seed.ts` creates the admin user (reads `SEED_ADMIN_EMAIL` env var, generates a random password).
+- PostgreSQL accessed through **Prisma**. Migrations and schema live in `server/prisma/`. Seed script at `server/prisma/seed.ts` creates admin + agent users. `seed-tickets.ts` creates 100 representative tickets spread over 180 days for dashboard testing.
 - Sessions stored in Postgres by Better Auth (no JWTs). Better Auth tables (User, Session, Account, Verification) generated in `server/src/generated/prisma/`.
 - Seeded users: admin (`SEED_ADMIN_EMAIL` env var, role: `admin`), agent (`agent@example.com` / `password123`, role: `agent`).
-- To create additional users: instantiate a separate `betterAuth` instance with sign-up enabled, call `seedAuth.api.signUpEmail()`, then optionally `prisma.user.update()` to set the role.
+- Users have a `deletedAt` field for soft deletion. `requireAuth` rejects sessions for soft-deleted users; `GET /api/users` excludes them by default.
 - **Running Prisma CLI against a non-default database:** pass `DATABASE_URL` directly in the shell — `dotenv/config` in `prisma.config.ts` loads `.env` but won't override an already-set env var: `DATABASE_URL="..." bunx prisma migrate deploy`.
+- **Dashboard stats** are computed by the PostgreSQL function `get_dashboard_stats()` (added via migration). It returns a JSON object — avoid recomputing these in application code.
+
+### Environment Variables
+
+Required in `server/.env`:
+
+```
+DATABASE_URL=
+BETTER_AUTH_SECRET=        # random 32+ char secret
+BETTER_AUTH_URL=           # http://localhost:3000
+TRUSTED_ORIGINS=           # comma-separated, e.g. http://localhost:5173
+SEED_ADMIN_EMAIL=
+WEBHOOK_SECRET=            # validates X-Webhook-Secret on POST /api/tickets/inbound
+GROQ_API_KEY=              # for AI classification, auto-resolve, summarize, polish
+NODE_ENV=                  # production enables auth rate-limiting
+SENTRY_DSN=                # optional: server error tracking
+SENTRY_ENVIRONMENT=        # optional
+```
+
+Client env (prefix with `VITE_` for Vite exposure):
+
+```
+VITE_SENTRY_DSN=
+VITE_SENTRY_ENVIRONMENT=
+```
 
 ### Unit / Component Testing (Vitest + React Testing Library)
 
@@ -190,7 +258,7 @@ E2E tests are reserved for scenarios that **cannot be covered by component tests
 **When to write E2E tests:**
 - Auth redirects (unauthenticated → `/login`, role-gated pages → `/`)
 - Navigation (clicking nav links, verifying URL changes)
-- Full-stack flows that require a real server and database
+- Full-stack flows that require a real server and database (e.g. `tickets-webhook.spec.ts`)
 
 **When NOT to write E2E tests:** loading states, error messages, badge/label rendering, count displays, date formatting — use component tests for all of these.
 
@@ -202,7 +270,7 @@ Use the **`e2e-test-writer` agent** for all Playwright test work. Invoke it via 
 bun run --filter e2e test
 ```
 
-This requires the dev servers to be running (`bun dev`). The test database is separate from dev — the E2E suite manages its own seed data. If tests fail, fix the root cause before marking the task done.
+This requires the dev servers to be running (`bun dev`). The test database is separate from dev — the E2E suite manages its own seed data via `global-setup.ts` (drops + re-applies all migrations, then seeds). If tests fail, fix the root cause before marking the task done.
 
 ### AI Integration
 
@@ -233,5 +301,5 @@ inbound webhook → status: new
 
 ### Email
 
-- Inbound: webhook endpoint (`POST /api/tickets/inbound`) receives parsed emails from SendGrid/Mailgun and creates tickets.
+- Inbound: webhook endpoint (`POST /api/tickets/inbound`) receives parsed emails from SendGrid/Mailgun and creates tickets. Secured with `X-Webhook-Secret` header; deduplicates by (fromEmail, subject, body) triple to prevent double-processing.
 - Outbound: email service module sends replies when an agent submits a response.

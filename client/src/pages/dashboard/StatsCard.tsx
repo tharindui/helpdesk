@@ -11,14 +11,16 @@ type Props = {
 export function StatsCard({ label, value, sub, icon: Icon }: Props) {
   return (
     <Card>
-      <CardContent className="flex items-start gap-4 pt-6">
-        <div className="rounded-md bg-primary/10 p-2 text-primary">
-          <Icon className="h-5 w-5" />
+      <CardContent className="flex flex-col gap-3 pt-5 pb-5">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+          <div className="rounded-md bg-primary/12 p-1.5 text-primary">
+            <Icon className="h-4 w-4" />
+          </div>
         </div>
-        <div className="space-y-0.5">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold text-foreground">{value}</p>
-          {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+        <div>
+          <p className="text-3xl font-bold text-foreground">{value}</p>
+          {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
         </div>
       </CardContent>
     </Card>

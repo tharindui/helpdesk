@@ -62,10 +62,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "radial-gradient(ellipse 100% 80% at 50% 40%, oklch(0.92 0.04 184 / 0.22) 0%, transparent 65%), var(--background)" }}>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Helpdesk</CardTitle>
+          <CardTitle className="font-serif text-3xl font-semibold">Helpdesk</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>

@@ -8,7 +8,7 @@ import {
   Cell,
 } from "recharts";
 
-const COLORS = ["#3b82f6", "#8b5cf6", "#f59e0b"];
+const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-5)"];
 
 function formatLabel(key: string) {
   return key

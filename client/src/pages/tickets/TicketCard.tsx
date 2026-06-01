@@ -36,7 +36,7 @@ export function TicketCard({
   return (
     <div className="rounded-lg border border-border bg-background">
       <div className="border-b border-border px-6 py-4 space-y-3">
-        <h1 className="text-xl font-semibold text-foreground">{ticket.subject}</h1>
+        <h1 className="font-serif text-xl font-semibold text-foreground">{ticket.subject}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <StatusSelect
             value={ticket.status}
