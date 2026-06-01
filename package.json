@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "bun run --filter '*' dev",
     "build": "bun run --filter '*' build",
+    "build:prod": "bun run --filter client build && bun run --filter server build",
     "test:e2e": "bun run --filter e2e test"
   }
 }

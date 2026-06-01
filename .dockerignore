@@ -1,0 +1,25 @@
+# Version control
+.git/
+.gitignore
+
+# Secrets — never bake into the image
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Dependencies — reinstalled during Docker build
+**/node_modules/
+
+# Build output — recreated during Docker build
+**/dist/
+server/src/generated/
+
+# Test suite — not part of the production image
+e2e/tests/
+e2e/playwright-report/
+e2e/test-results/
+
+# Misc
+**/*.log
+.DS_Store
+Thumbs.db
