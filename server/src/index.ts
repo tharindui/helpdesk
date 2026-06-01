@@ -1,3 +1,5 @@
+import "./instrument";
+import { Sentry } from "./lib/sentry";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -44,7 +46,7 @@ app.get("/api/me", requireAuth, (req, res) => {
 app.use("/api/users", usersRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/dashboard", dashboardRouter);
-
+Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);
 
 async function boot() {

@@ -8,10 +8,9 @@ export default function NavBar() {
   const navigate = useNavigate();
   const { data: session } = authClient.useSession();
 
-  const handleSignOut = () => {
-    authClient.signOut({
-      fetchOptions: { onSuccess: () => navigate("/login", { replace: true }) },
-    });
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    navigate("/login", { replace: true });
   };
 
   const initials = session?.user.name

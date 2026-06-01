@@ -1,3 +1,4 @@
+import { Sentry } from "@/lib/sentry";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -53,7 +54,8 @@ export function ReplyForm({
     try {
       const options = await ticketsApi.polishReply(ticketId, draft);
       setReplyOptions(options);
-    } catch {
+    } catch (err) {
+      Sentry.captureException(err);
       setPolishError("Failed to polish reply. Please try again.");
     } finally {
       setIsPolishing(false);
