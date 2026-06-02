@@ -19,7 +19,8 @@ import { type Ticket } from "./ticketsApi";
 export function TicketTableSkeleton() {
   return (
     <div className="rounded-lg border border-border overflow-hidden">
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40">
             {["Subject", "From", "Status", "Category", "Received"].map((h) => (
@@ -41,6 +42,7 @@ export function TicketTableSkeleton() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -126,7 +128,8 @@ export function TicketTable({ tickets, sorting, onSortingChange }: Props) {
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
         <thead>
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id} className="border-b border-border bg-muted/40">
@@ -175,6 +178,7 @@ export function TicketTable({ tickets, sorting, onSortingChange }: Props) {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
